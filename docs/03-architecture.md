@@ -232,40 +232,36 @@ python -m datapattern.render --method graphviz --in datapatterns.json --out rend
 
 ---
 
-## G. 将来のリポジトリ構成
+## G. リポジトリ構成（現状）
 
 ```text
-pyproject.toml                       # uv, ruff, pytest, jsonschema, jinja2, graphviz(py), tree-sitter-java, allpairspy
-                                     #   wireviz は実行時に CLI として要求（GPLv3 のため依存に import しない）
+pyproject.toml                       # uv, hatchling, ruff, pytest / deps: jsonschema, jinja2
+                                     #   dot / wireviz / mmdc は実行時 CLI（未導入なら html にフォールバック）
 src/datapattern/
-  __init__.py
-  model.py                           # DataPatternModel の dataclass + load/validate
-  schema/datapattern.schema.json     # 契約（バージョン付き JSON Schema）
-  ingest.py                          # 決定論: 作業マニフェスト生成
-  static_scan.py                     # 決定論: tree-sitter-java で事実抽出
+  model.py                           # 検証 + frozen dataclass ビュー
+  schema/datapattern.schema.json     # 契約（DataPatternModel）
+  schema/evidence.schema.json        # static_scan 出力の契約
+  ingest.py                          # 決定論: manifest.json
+  static_scan.py                     # 決定論: regex スキャン → evidence.json
+  combos.py                          # 決定論: option 組合せ（境界＋ペアワイズ＋排他違反）
+  orchestrate.py                     # prepare_workspace / render_model / build_report
+  report.py  templates/report.html.j2  # 決定論: Jinja2 で report.html
   render/
-    base.py                          # Renderer ABC + 契約型
-    registry.py                      # registry.yaml からレンダラを discover
-    html_renderer.py
-    wireviz_renderer.py              # connectivity → WireViz YAML → `wireviz` CLI
-    graphviz_renderer.py
-  report.py                          # 決定論: Jinja2 で report.html を組立
-  templates/report.html.j2
-  combos.py                          # 決定論: option 組合せ（境界+ペアワイズ）生成
-  cli.py                             # datapattern ingest|scan|render|report|run
-renderers/registry.yaml
+    base.py                          # Renderer ABC + Asset / RenderContext
+    pipeline.py                      # render_patterns / render_auto + index.json
+    registry.py                      # renderers/registry.toml を discover、requires を which で判定
+    html_renderer.py                 # 既定・ゼロ依存
+    graphviz_renderer.py             # DOT → dot CLI
+    wireviz_renderer.py              # WireViz YAML → wireviz CLI（GPLv3, import しない）
+    mermaid_renderer.py              # Mermaid → mmdc CLI（疎結合の実証枠）
+  renderers/registry.toml
+  cli.py                             # ingest|scan|combos|validate|schema|render|report|run
 skills/
-  capital-datapattern-report/SKILL.md
-  capital-addon-analysis/SKILL.md
-  datapattern-render-html/SKILL.md
-  datapattern-render-wireviz/SKILL.md
-  datapattern-render-graphviz/SKILL.md
-tests/
-  test_model.py  test_static_scan.py  test_combos.py
-  test_html_renderer.py  test_wireviz_renderer.py  test_graphviz_renderer.py
-  test_report.py  test_registry.py
-  fixtures/                          # 手書き datapatterns.json とゴールデン出力
-docs/                                # 本ドキュメント群
+  capital-datapattern-report/  capital-addon-analysis/
+  datapattern-render-{html,graphviz,wireviz,mermaid}/
+tests/                               # 89 passing（+ mmdc/wireviz は skipif）
+  fixtures/{valid_*.json, invalid_*.json, sample_addon/**.java, expected/report_full.html}
+docs/                                # 01〜03
 ```
 
 ---
@@ -279,7 +275,7 @@ docs/                                # 本ドキュメント群
 | 3 | 解析 | `static_scan.py` + `ingest.py` + `combos.py` + `capital-addon-analysis` skill | ✅ 完了（`ingest.py`＝manifest、`static_scan.py`＝regex スキャン→`evidence.json`（`evidence.schema.json` 準拠）、`combos.py`＝境界＋ペアワイズ＋排他違反。`datapattern ingest`/`scan`/`combos` 実働。tree-sitter-java は将来の高精度化オプション） |
 | 4 | オーケストレータ | `capital-datapattern-report` skill ＋ `datapattern run` で全パイプライン結線 | ✅ 完了（`orchestrate.py`＝`prepare_workspace`（ingest+scan+テンプレ）/`build_report`（validate+render+report）、`datapattern run --addon/--patterns`、`capital-datapattern-report` skill） |
 | 5 | レンダラ拡充 | `wireviz`（CLI 起動）+ `graphviz` + registry。未導入環境で `html` にフォールバック | ✅ 完了（`render/registry.py` + `renderers/registry.toml`、`graphviz_renderer`（DOT→`dot`）、`wireviz_renderer`（WireViz YAML→`wireviz`）、`--method auto` でパターン別選択。`dot`/`wireviz` 無しでも `html` に落ちて全テスト green） |
-| 6 | 早期フォロー | `mermaid` / `schemdraw` / `drawio` を **skill 追加のみ**で導入（疎結合の実証） | 次 |
+| 6 | 早期フォロー | `mermaid` / `schemdraw` / `drawio` を **skill 追加のみ**で導入（疎結合の実証） | ✅ `mermaid` で実証（`render/mermaid_renderer.py` ＋ `registry.toml` 1 行 ＋ SKILL.md ＋ テスト の 4 ファイルのみ。契約・pipeline・registry・report・既存レンダラは無改修）。`schemdraw`（MIT, import 可）/ `drawio`（`drawpyo`）も同じレシピ |
 
 ---
 

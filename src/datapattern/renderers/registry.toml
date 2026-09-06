@@ -18,3 +18,9 @@ name = "wireviz"
 module = "datapattern.render.wireviz_renderer:WirevizRenderer"
 requires = ["wireviz"]
 deterministic = true
+
+[[renderer]]
+name = "mermaid"
+module = "datapattern.render.mermaid_renderer:MermaidRenderer"
+requires = ["mmdc"]
+deterministic = true

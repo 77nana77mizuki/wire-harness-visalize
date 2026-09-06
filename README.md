@@ -3,9 +3,9 @@
 Capital Logic（Siemens Capital）の Java 製アドオン開発において、
 **設計時にテスト用のデータパターンを洗い出し、図つき HTML レポートを出力する**ための基盤。
 
-現在フェーズ: ロードマップ #1〜#5 完了（[docs/03 §H](docs/03-architecture.md#h-実装ロードマップ)）。
+現在フェーズ: ロードマップ #1〜#6 完了（[docs/03 §H](docs/03-architecture.md#h-実装ロードマップ)）。
 アドオンソース → 静的スキャン → （LLM で datapatterns.json）→ 図つき `report.html` まで通る。
-図は `--method auto` で html / graphviz / wireviz をパターン別に自動選択（外部ツール無しなら html にフォールバック）。
+図は `--method auto` で html / graphviz / wireviz / mermaid をパターン別に自動選択（外部ツール無しなら html にフォールバック）。
 
 ## セットアップ / 開発
 
