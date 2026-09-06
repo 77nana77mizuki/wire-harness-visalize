@@ -17,6 +17,7 @@
       "title": "全 option が false のとき対象が空になる",
       "summary": "option 式 OPT_GND が false のとき、DRC の対象コネクタが 0 件になる境界。",
       "rationale": "アドオンが空コレクションで NPE を起こさないか確認するため。",
+      "sourceRefs": ["src/main/java/com/example/GroundCircuitDrc.java#L44-L52"],
       "optionExpression": "OPT_GND",
       "variantMatrix": [
         { "expr": "OPT_GND=0", "resolvesTo": [] },

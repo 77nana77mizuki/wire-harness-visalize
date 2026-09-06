@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GroundCircuitDrc — データパターン</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #ffffff; --fg: #1a1a1a; --muted: #5b5b5b;
+  --border: #d8d8d8; --panel: #f6f6f6; --accent: #0b5cad;
+  --badge-option: #7a4dd6; --badge-circuit: #0a7d55; --badge-property: #b5560a;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #17191c; --fg: #e8e8e8; --muted: #a0a0a0;
+    --border: #3a3d42; --panel: #1f2226; --accent: #5aa9f0;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 2rem 1.25rem 4rem;
+  background: var(--bg); color: var(--fg);
+  font: 15px/1.65 system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+}
+main { max-width: 940px; margin: 0 auto; }
+h1 { font-size: 1.6rem; margin: 0 0 .25rem; }
+h2 { font-size: 1.2rem; margin: 2.5rem 0 .5rem; padding-bottom: .3rem; border-bottom: 2px solid var(--border); }
+h3 { font-size: 1.02rem; margin: 1.6rem 0 .4rem; }
+.sub { color: var(--muted); margin: 0 0 1.5rem; }
+.rationale { background: var(--panel); border-left: 3px solid var(--accent); padding: .6rem .9rem; margin: .6rem 0; }
+.rationale strong { color: var(--muted); font-weight: 600; }
+ul.hints { margin: .5rem 0; padding-left: 1.3rem; }
+code { background: var(--panel); padding: .1rem .35rem; border-radius: 3px; font-size: .9em; }
+.badge { display: inline-block; font-size: .72rem; font-weight: 700; letter-spacing: .03em;
+  color: #fff; padding: .1rem .5rem; border-radius: 999px; vertical-align: middle; }
+.badge.option_config { background: var(--badge-option); }
+.badge.circuit { background: var(--badge-circuit); }
+.badge.property_set { background: var(--badge-property); }
+.dp-table { border-collapse: collapse; width: 100%; margin: .5rem 0 1rem; font-size: .92rem; }
+.dp-table th, .dp-table td { border: 1px solid var(--border); padding: .35rem .55rem; text-align: left; vertical-align: top; }
+.dp-table thead th { background: var(--panel); }
+.dp-empty { color: var(--muted); }
+figure.dp-figure { margin: 1rem 0; border: 1px solid var(--border); border-radius: 6px; padding: .9rem 1rem .5rem; overflow-x: auto; }
+figure.dp-figure figcaption { color: var(--muted); font-size: .85rem; margin-top: .3rem; }
+.dp-expr { margin: .2rem 0 .6rem; }
+.dp-subhead { font-weight: 600; margin: .8rem 0 .2rem; color: var(--muted); }
+.summary-table td:nth-child(2), .summary-table th:nth-child(2) { text-align: right; width: 6rem; }
+.refs { font-size: .82rem; color: var(--muted); }
+.refs code { font-size: .95em; }
+footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border); color: var(--muted); font-size: .82rem; }
+@media print {
+  body { padding: 0; font-size: 11pt; }
+  h2 { break-after: avoid; }
+  section.pattern { break-inside: avoid; }
+  figure.dp-figure { break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+<main>
+<h1>GroundCircuitDrc — テスト用データパターン</h1>
+<p class="sub">
+  プラグイン種別: <strong>check</strong> / Capital 2207  / パターン 3 件
+</p>
+
+<h2>サマリ</h2>
+<table class="dp-table summary-table">
+  <thead><tr><th>分類</th><th>件数</th><th>説明</th></tr></thead>
+  <tbody>    <tr><td><span class="badge option_config">option_config</span></td><td>1</td><td>オプション / バリアント構成</td></tr>    <tr><td><span class="badge circuit">circuit</span></td><td>1</td><td>回路 / サブ回路の設計</td></tr>    <tr><td><span class="badge property_set">property_set</span></td><td>1</td><td>部品・回路のプロパティ設定</td></tr>  </tbody>
+</table>
+<p class="sub">
+  網羅の考え方: 各パターンの「なぜ必要か（rationale）」と「テストのヒント（testHints）」に、
+  対象範囲とその外側（何を試さないか）を明記する。
+</p>
+
+<h2>パターン詳細</h2><section class="pattern" id="circuit-switched-ground">
+  <h3>スイッチドグラウンド最小回路 <span class="badge circuit">circuit</span></h3>
+  <p>device 2 個をスプライス経由で接地する最小構成。</p>
+  <p class="rationale"><strong>なぜ必要か:</strong> アドオンがスプライス経由の経路をたどれるか確認するため。</p>
+
+  <figure class="dp-figure dp-circuit" id="fig-circuit-switched-ground">
+<p class="dp-subhead">ノード</p>
+<table class="dp-table">
+  <thead><tr>
+    <th>id</th>
+    <th>種別</th>
+    <th>ピン数</th>
+    <th>ピン名</th>
+  </tr></thead>
+  <tbody>
+    <tr><td>D1</td><td>device</td><td>2</td><td>VCC, GND</td></tr>
+    <tr><td>S1</td><td>splice</td><td class="dp-empty">—</td><td class="dp-empty">—</td></tr>
+    <tr><td>X1</td><td>connector</td><td>2</td><td class="dp-empty">—</td></tr>
+  </tbody>
+</table>
+<p class="dp-subhead">接続</p>
+<table class="dp-table">
+  <thead><tr>
+    <th>from</th>
+    <th>to</th>
+    <th>経由</th>
+    <th>断面積</th>
+    <th>色</th>
+    <th>シールド</th>
+  </tr></thead>
+  <tbody>
+    <tr><td>D1.GND</td><td>S1</td><td class="dp-empty">—</td><td>0.5</td><td>BK</td><td>false</td></tr>
+    <tr><td>S1</td><td>X1.1</td><td class="dp-empty">—</td><td>0.5</td><td>BK</td><td>false</td></tr>
+  </tbody>
+</table>
+<figcaption>スイッチドグラウンド最小回路 <span class="dp-type">[circuit]</span></figcaption>
+</figure></section><section class="pattern" id="opt-cfg-all-false">
+  <h3>全 option が false のとき対象が空になる <span class="badge option_config">option_config</span></h3>
+  <p>option 式 OPT_GND が false のとき、DRC の対象コネクタが 0 件になる境界。</p>
+  <p class="rationale"><strong>なぜ必要か:</strong> アドオンが空コレクションで NPE を起こさないか確認するため。</p>
+
+  <figure class="dp-figure dp-option_config" id="fig-opt-cfg-all-false">
+<p class="dp-expr">option expression: <code>OPT_GND</code></p>
+<table class="dp-table">
+  <thead><tr>
+    <th>option 値の組</th>
+    <th>解決後に残るオブジェクト</th>
+  </tr></thead>
+  <tbody>
+    <tr><td>OPT_GND=0</td><td class="dp-empty">—</td></tr>
+    <tr><td>OPT_GND=1</td><td>X1, W1</td></tr>
+  </tbody>
+</table>
+<figcaption>全 option が false のとき対象が空になる <span class="dp-type">[option_config]</span></figcaption>
+</figure>  <p class="dp-subhead">テストのヒント</p>
+  <ul class="hints">    <li>OPT_GND=0 で DRC を実行し、警告 0 件・例外なしを確認</li>  </ul>  <p class="refs">根拠: <code>src/main/java/com/example/GroundCircuitDrc.java#L44-L52</code>  </p></section><section class="pattern" id="prop-wire-csa-lower-bound">
+  <h3>電線 CSA の下限境界 <span class="badge property_set">property_set</span></h3>
+  <p>wire の断面積を仕様下限 0.35mm2 に設定したケース。</p>
+  <p class="rationale"><strong>なぜ必要か:</strong> アドオンの CSA 下限チェックが境界値でどう判定するか確認するため。</p>
+
+  <figure class="dp-figure dp-property_set" id="fig-prop-wire-csa-lower-bound">
+<table class="dp-table">
+  <thead><tr>
+    <th>対象</th>
+    <th>プロパティ</th>
+    <th>期待値</th>
+    <th>理由（同値クラス / 境界）</th>
+  </tr></thead>
+  <tbody>
+    <tr><td>W1</td><td>csa</td><td>0.35</td><td>下限ちょうど。合格side の境界</td></tr>
+    <tr><td>W1</td><td>csa</td><td>0.34</td><td>下限未満。違反side の境界</td></tr>
+  </tbody>
+</table>
+<p class="dp-subhead">オブジェクトのプロパティ</p>
+<table class="dp-table">
+  <thead><tr>
+    <th>参照</th>
+    <th>種別</th>
+    <th>プロパティ</th>
+  </tr></thead>
+  <tbody>
+    <tr><td>W1</td><td>wire</td><td>csa=0.35</td></tr>
+  </tbody>
+</table>
+<figcaption>電線 CSA の下限境界 <span class="dp-type">[property_set]</span></figcaption>
+</figure>  <p class="dp-subhead">テストのヒント</p>
+  <ul class="hints">    <li>0.35 は合格、0.34 は違反になることを確認</li>  </ul></section>
+<footer>
+  DataPatternModel v1.0 / 生成: capital-addon-analysis@0.1.0</footer>
+</main>
+</body>
+</html>

@@ -179,6 +179,7 @@ class Pattern:
     title: str
     summary: str
     rationale: str
+    source_refs: tuple[str, ...] = ()
     capital_objects: tuple[CapitalObject, ...] = ()
     option_expression: str | None = None
     variant_matrix: tuple[VariantRow, ...] = ()
@@ -196,6 +197,7 @@ class Pattern:
             title=d["title"],
             summary=d["summary"],
             rationale=d["rationale"],
+            source_refs=tuple(d.get("sourceRefs", ())),
             capital_objects=tuple(CapitalObject.from_dict(o) for o in d.get("capitalObjects", ())),
             option_expression=d.get("optionExpression"),
             variant_matrix=tuple(VariantRow.from_dict(v) for v in d.get("variantMatrix", ())),

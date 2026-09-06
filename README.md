@@ -3,8 +3,8 @@
 Capital Logic（Siemens Capital）の Java 製アドオン開発において、
 **設計時にテスト用のデータパターンを洗い出し、図つき HTML レポートを出力する**ための基盤。
 
-現在フェーズ: **スキャフォールド完了**（[docs/03 §H](docs/03-architecture.md#h-実装ロードマップ)）。
-`DataPatternModel`（JSON Schema）と型付きビュー、CLI 骨組みが動作。次は縦串（HTML レポート最小 e2e）。
+現在フェーズ: **縦串（最小 e2e）完了**（[docs/03 §H](docs/03-architecture.md#h-実装ロードマップ)）。
+`datapatterns.json` → HTML レンダラ → 単一 `report.html` が生成できる。次は解析（Java 静的スキャン）。
 
 ## セットアップ / 開発
 
@@ -12,12 +12,13 @@ Capital Logic（Siemens Capital）の Java 製アドオン開発において、
 uv sync                        # 依存 + venv（Python 3.12 は uv が管理）
 uv run pytest                  # テスト
 uv run ruff check . && uv run ruff format --check .
-uv run datapattern --help      # CLI
-uv run datapattern validate <datapatterns.json>
-uv run datapattern schema      # 同梱 JSON Schema を出力
+uv run datapattern --help
+uv run datapattern validate <datapatterns.json>          # JSON Schema 検証
+uv run datapattern report <datapatterns.json> --out out/ # out/report.html を生成
+uv run datapattern schema                                # 同梱 JSON Schema を出力
 ```
 
-`ingest` / `scan` / `render` / `report` / `run` は骨組み（ロードマップの各弾で実装）。
+`validate` / `schema` / `render` / `report` が実働。`ingest` / `scan` / `run` は骨組み。
 
 ## ドキュメント
 

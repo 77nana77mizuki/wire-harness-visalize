@@ -280,8 +280,8 @@ docs/                                # 本ドキュメント群
 | # | 内容 | 完了条件 | 状態 |
 |---|------|----------|------|
 | 1 | スキャフォールド | `pyproject.toml` + `model.py` + JSON Schema + `cli.py` 骨組み、`pytest` が緑 | ✅ 完了（uv + Python 3.12、29 tests green、`datapattern validate`/`schema` 実働） |
-| 2 | 縦串（最小 e2e） | 手書き `datapatterns.json` → `datapattern-render-html` → `report.py` → `report.html`、ゴールデンテスト | 次 |
-| 3 | 解析 | `static_scan.py`（tree-sitter-java）+ `ingest.py` + `combos.py` + `capital-addon-analysis` skill | 未 |
+| 2 | 縦串（最小 e2e） | 手書き `datapatterns.json` → `datapattern-render-html` → `report.py` → `report.html`、ゴールデンテスト | ✅ 完了（`html_renderer` + `render/pipeline.py` + `report.py` + Jinja2 テンプレート、`datapattern render`/`report` 実働、42 tests green、ゴールデン `tests/fixtures/expected/report_full.html`） |
+| 3 | 解析 | `static_scan.py`（tree-sitter-java）+ `ingest.py` + `combos.py` + `capital-addon-analysis` skill | 次 |
 | 4 | オーケストレータ | `capital-datapattern-report` skill で全パイプライン結線 | 未 |
 | 5 | レンダラ拡充 | `wireviz`（CLI 起動）+ `graphviz` + `registry.yaml`。`wireviz` 未導入環境で `html` にフォールバックすること | 未 |
 | 6 | 早期フォロー | `mermaid` / `schemdraw` / `drawio` を **skill 追加のみ**で導入（疎結合の実証） | 未 |

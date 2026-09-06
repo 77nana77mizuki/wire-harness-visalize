@@ -198,6 +198,11 @@
           "type": "string",
           "minLength": 1
         },
+        "sourceRefs": {
+          "description": "このパターンの根拠となるソース位置。'path' もしくは 'path#Lstart-Lend' 形式。",
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
         "capitalObjects": {
           "type": "array",
           "items": { "$ref": "#/$defs/capitalObject" }

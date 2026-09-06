@@ -1,7 +1,7 @@
 """``datapattern`` コマンドライン。
 
-第1弾では ``validate`` / ``schema`` のみ実働。``ingest``/``scan``/``render``/``report``/``run``
-は骨組み（ロードマップ [[docs/03-architecture.md]] §H）。
+実働: ``validate`` / ``schema`` / ``render`` / ``report``。
+骨組み: ``ingest`` / ``scan`` / ``run``（ロードマップ ``docs/03-architecture.md`` §H）。
 """
 
 from __future__ import annotations
@@ -14,25 +14,51 @@ from pathlib import Path
 
 from datapattern import __version__
 from datapattern.model import SchemaValidationError, load_model, load_schema
+from datapattern.render.base import Renderer
 
 _NOT_IMPLEMENTED_PHASE = {
     "ingest": "第3弾",
     "scan": "第3弾",
-    "render": "第5弾",
-    "report": "第2弾",
     "run": "第4弾",
 }
 
 
-def _cmd_validate(args: argparse.Namespace) -> int:
+class CliError(Exception):
+    """コマンド実行時のエラー。``main`` が終了コードに変換する。"""
+
+    def __init__(self, message: str, code: int = 1) -> None:
+        super().__init__(message)
+        self.code = code
+
+
+# 第5弾でレジストリに置き換える。今は html のみ。
+_RENDERERS: dict[str, type[Renderer]] = {}
+
+
+def _renderer(name: str) -> Renderer:
+    if not _RENDERERS:
+        from datapattern.render.html_renderer import HtmlRenderer
+
+        _RENDERERS["html"] = HtmlRenderer
     try:
-        model = load_model(args.path)
+        return _RENDERERS[name]()
+    except KeyError:
+        raise CliError(
+            f"未知のレンダラ: {name!r}（利用可能: {', '.join(sorted(_RENDERERS))}）", code=2
+        ) from None
+
+
+def _load(path: Path):
+    try:
+        return load_model(path)
     except SchemaValidationError as exc:
-        print(str(exc), file=sys.stderr)
-        return 1
+        raise CliError(str(exc), code=1) from None
     except (OSError, json.JSONDecodeError) as exc:
-        print(f"cannot read {args.path}: {exc}", file=sys.stderr)
-        return 2
+        raise CliError(f"cannot read {path}: {exc}", code=2) from None
+
+
+def _cmd_validate(args: argparse.Namespace) -> int:
+    model = _load(args.path)
     print(
         f"OK: {args.path} は DataPatternModel v{model.schema_version} として妥当です "
         f"(addon={model.addon.name!r}, patterns={len(model.patterns)})"
@@ -41,14 +67,36 @@ def _cmd_validate(args: argparse.Namespace) -> int:
 
 
 def _cmd_schema(args: argparse.Namespace) -> int:
-    schema = load_schema()
     if args.path_only:
         import datapattern.schema as schema_pkg
 
         print(Path(schema_pkg.__file__).parent / "datapattern.schema.json")
     else:
-        json.dump(schema, sys.stdout, ensure_ascii=False, indent=2, sort_keys=False)
+        json.dump(load_schema(), sys.stdout, ensure_ascii=False, indent=2)
         sys.stdout.write("\n")
+    return 0
+
+
+def _cmd_render(args: argparse.Namespace) -> int:
+    from datapattern.render.pipeline import render_patterns
+
+    model = _load(args.path)
+    manifest = render_patterns(model, _renderer(args.method), args.out / "renders")
+    print(
+        f"render: {len(manifest.assets)} 件を {manifest.method_dir}/ に出力"
+        f"（skip {len(manifest.skipped)} 件）"
+    )
+    return 0
+
+
+def _cmd_report(args: argparse.Namespace) -> int:
+    from datapattern.render.pipeline import render_patterns
+    from datapattern.report import write_report
+
+    model = _load(args.path)
+    manifest = render_patterns(model, _renderer(args.method), args.out / "renders")
+    out_html = write_report(model, manifest, args.out / "report.html")
+    print(f"report: {out_html}（patterns={len(model.patterns)}, 図={len(manifest.assets)}）")
     return 0
 
 
@@ -56,7 +104,7 @@ def _cmd_stub(args: argparse.Namespace) -> int:
     phase = _NOT_IMPLEMENTED_PHASE.get(args.command, "未定")
     print(
         f"`datapattern {args.command}` は未実装です（{phase}で実装予定）。"
-        f" 進捗は docs/03-architecture.md §H を参照。",
+        " 進捗は docs/03-architecture.md §H を参照。",
         file=sys.stderr,
     )
     return 3
@@ -83,7 +131,19 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_schema.set_defaults(func=_cmd_schema)
 
-    for name in ("ingest", "scan", "render", "report", "run"):
+    p_render = sub.add_parser("render", help="各パターンを図アセットに変換する")
+    p_render.add_argument("path", type=Path, help="datapatterns.json")
+    p_render.add_argument("--out", type=Path, default=Path("out"), help="出力先（既定: out/）")
+    p_render.add_argument("--method", default="html", help="レンダラ名（既定: html）")
+    p_render.set_defaults(func=_cmd_render)
+
+    p_report = sub.add_parser("report", help="report.html を生成する（render も実行）")
+    p_report.add_argument("path", type=Path, help="datapatterns.json")
+    p_report.add_argument("--out", type=Path, default=Path("out"), help="出力先（既定: out/）")
+    p_report.add_argument("--method", default="html", help="レンダラ名（既定: html）")
+    p_report.set_defaults(func=_cmd_report)
+
+    for name in ("ingest", "scan", "run"):
         p = sub.add_parser(name, help=f"[未実装] {name}")
         p.set_defaults(func=_cmd_stub)
 
@@ -93,7 +153,11 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    return int(args.func(args))
+    try:
+        return int(args.func(args))
+    except CliError as exc:
+        print(str(exc), file=sys.stderr)
+        return exc.code
 
 
 if __name__ == "__main__":

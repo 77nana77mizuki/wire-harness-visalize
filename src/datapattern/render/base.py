@@ -12,9 +12,11 @@ from abc import ABC, abstractmethod
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import ClassVar
+from typing import ClassVar, Literal
 
 from datapattern.model import Pattern
+
+AssetKind = Literal["svg", "html"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -37,10 +39,25 @@ class Asset:
     path: Path
     """``out_dir`` からの相対パス。"""
     title: str
+    kind: AssetKind = "svg"
+    """``report.html`` への埋め込み方。``svg`` は inline SVG、``html`` はそのまま HTML 断片。"""
     caption: str = ""
     width: int | None = None
     height: int | None = None
     warnings: tuple[str, ...] = ()
+
+    def as_record(self) -> dict[str, object]:
+        """``index.json`` に書く 1 エントリ分の辞書（決定論的なキー順）。"""
+        return {
+            "asset_path": self.path.as_posix(),
+            "kind": self.kind,
+            "title": self.title,
+            "caption": self.caption,
+            "width": self.width,
+            "height": self.height,
+            "method": self.method,
+            "warnings": list(self.warnings),
+        }
 
 
 class Renderer(ABC):
