@@ -16,7 +16,7 @@ from typing import ClassVar, Literal
 
 from datapattern.model import Pattern
 
-AssetKind = Literal["svg", "html"]
+AssetKind = Literal["svg", "html", "xml"]
 
 
 @dataclass(frozen=True, slots=True)

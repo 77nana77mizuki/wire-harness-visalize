@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+from html import escape
 from importlib import resources
 from pathlib import Path
 
@@ -35,9 +36,21 @@ def _load_template_source() -> str:
 def _figures_for(pattern: Pattern, manifest: RenderManifest) -> list[dict[str, str]]:
     figs: list[dict[str, str]] = []
     for asset in manifest.assets_for(pattern.id):
-        content = manifest.path_of(asset).read_text("utf-8").rstrip("\n")
+        raw = manifest.path_of(asset).read_text("utf-8").rstrip("\n")
         if asset.kind == "svg":
-            content = f'<div class="svg-wrap">{content}</div>'
+            content = f'<div class="svg-wrap">{raw}</div>'
+        elif asset.kind == "xml":
+            link = (
+                '<a href="https://app.diagrams.net/" target="_blank" '
+                'rel="noopener">app.diagrams.net</a>'
+            )
+            content = (
+                f'<p class="xml-note">編集可能ファイル。下の XML を {link} に貼り付け'
+                "（Extras → Edit Diagram）。</p>"
+                f'<pre class="xml">{escape(raw)}</pre>'
+            )
+        else:
+            content = raw
         figs.append({"method": asset.method, "content": content})
     return figs
 

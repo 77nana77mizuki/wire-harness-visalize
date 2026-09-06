@@ -1,11 +1,13 @@
 """``renderers/registry.toml`` を読み、使えるレンダラだけを提供する。
 
-- ``requires`` の外部コマンドが `PATH` に無いエントリは自動スキップ
+- ``requires``（外部コマンド）が `PATH` に無い / ``requires_py``（Python モジュール）が
+  import できないエントリは自動スキップ
 - ``select()`` は preferred → 任意の対応レンダラ → ``html`` の順にフォールバック
 """
 
 from __future__ import annotations
 
+import importlib.util
 import shutil
 import tomllib
 from dataclasses import dataclass
@@ -21,6 +23,7 @@ class RendererEntry:
     name: str
     module: str
     requires: tuple[str, ...]
+    requires_py: tuple[str, ...]
     available: bool
     missing: tuple[str, ...]
 
@@ -76,11 +79,15 @@ class Registry:
 
 def _entry_from_toml(raw: dict[str, object]) -> RendererEntry:
     requires = tuple(str(r) for r in raw.get("requires", ()))
-    missing = tuple(r for r in requires if shutil.which(r) is None)
+    requires_py = tuple(str(r) for r in raw.get("requires_py", ()))
+    missing = tuple(r for r in requires if shutil.which(r) is None) + tuple(
+        f"py:{m}" for m in requires_py if importlib.util.find_spec(m) is None
+    )
     return RendererEntry(
         name=str(raw["name"]),
         module=str(raw["module"]),
         requires=requires,
+        requires_py=requires_py,
         available=not missing,
         missing=missing,
     )

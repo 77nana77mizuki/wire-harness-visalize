@@ -2,8 +2,15 @@
 
 import json
 
+import pytest
+
 from datapattern.cli import main
-from datapattern.model import load_named_schema, validate_against, validate_model_dict
+from datapattern.model import (
+    load_model,
+    load_named_schema,
+    validate_against,
+    validate_model_dict,
+)
 from datapattern.orchestrate import build_report, patterns_template, prepare_workspace
 
 
@@ -72,6 +79,26 @@ def test_run_full(capsys, tmp_path, fixtures_dir):
 def test_run_needs_an_argument(capsys, tmp_path):
     rc = main(["run", "--out", str(tmp_path)])
     assert rc == 2
+
+
+def test_method_comma_list(tmp_path, fixtures_dir):
+    from datapattern.orchestrate import render_model
+
+    model = load_model(fixtures_dir / "valid_full.json")
+    manifest = render_model(model, "html,drawio", tmp_path)
+    methods = {a.method for a in manifest.assets}
+    assert methods <= {"html", "drawio"}
+    # circuit は html と drawio 両方、property_set は html のみ
+    assert {a.method for a in manifest.assets_for("circuit-switched-ground")} == {"html", "drawio"}
+    assert {a.method for a in manifest.assets_for("prop-wire-csa-lower-bound")} == {"html"}
+
+
+def test_method_comma_list_rejects_unknown(tmp_path, fixtures_dir):
+    from datapattern.orchestrate import RendererNotFound, render_model
+
+    model = load_model(fixtures_dir / "valid_full.json")
+    with pytest.raises(RendererNotFound):
+        render_model(model, "html,bogus", tmp_path)
 
 
 def test_run_is_deterministic(tmp_path, fixtures_dir):

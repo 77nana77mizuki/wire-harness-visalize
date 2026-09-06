@@ -18,6 +18,7 @@ from datapattern.render.pipeline import (
     render_all,
     render_auto,
     render_patterns,
+    render_subset,
 )
 from datapattern.render.registry import load_registry
 from datapattern.report import write_report
@@ -89,9 +90,10 @@ def prepare_workspace(src: Path, out: Path) -> PreparedWorkspace:
 def render_model(model: DataPatternModel, method: str, out: Path) -> RenderManifest:
     """``method`` を解決して描画する。
 
-    - ``"all"``  … パターンごとに対応レンダラ全部（レポートのタブ比較用）
-    - ``"auto"`` … パターンごとにレジストリが 1 つ選ぶ
-    - それ以外  … その名前のレンダラ 1 本
+    - ``"all"``            … パターンごとに対応レンダラ全部（レポートのタブ比較用）
+    - ``"auto"``           … パターンごとにレジストリが 1 つ選ぶ
+    - ``"a,b,c"``（カンマ） … 指定した方式のうち各パターンを扱えるもの
+    - それ以外            … その名前のレンダラ 1 本
     """
     registry = load_registry()
     renders_dir = out / "renders"
@@ -99,6 +101,15 @@ def render_model(model: DataPatternModel, method: str, out: Path) -> RenderManif
         return render_all(model, registry, renders_dir)
     if method == "auto":
         return render_auto(model, registry, renders_dir)
+    if "," in method:
+        names = [m.strip() for m in method.split(",") if m.strip()]
+        unknown = [n for n in names if registry.get(n) is None]
+        if unknown:
+            avail = ", ".join(registry.names()) or "(なし)"
+            raise RendererNotFound(
+                f"レンダラ {', '.join(unknown)} は使えません（利用可能: {avail}）"
+            )
+        return render_subset(model, registry, names, renders_dir)
     renderer = registry.get(method)
     if renderer is None:
         avail = ", ".join(registry.names()) or "(なし)"

@@ -1,10 +1,16 @@
 # レンダラのレジストリ。新方式は 1 エントリ足すだけ（コア無改修）。
-# requires: 実行時に必要な外部コマンド（shutil.which で確認、無ければそのレンダラをスキップ）。
+# requires:    実行時に必要な外部コマンド（shutil.which で確認）
+# requires_py: import できる必要がある Python モジュール（importlib で確認）
+# どちらか満たせないエントリは --method auto / all で自動スキップ（html にフォールバック）。
 
 [[renderer]]
 name = "html"
 module = "datapattern.render.html_renderer:HtmlRenderer"
-requires = []
+deterministic = true
+
+[[renderer]]
+name = "svg"
+module = "datapattern.render.svg_renderer:SvgRenderer"
 deterministic = true
 
 [[renderer]]
@@ -16,7 +22,7 @@ deterministic = true
 [[renderer]]
 name = "wireviz"
 module = "datapattern.render.wireviz_renderer:WirevizRenderer"
-requires = ["wireviz"]
+requires = ["wireviz"] # GPLv3。import せず CLI 起動
 deterministic = true
 
 [[renderer]]
@@ -24,3 +30,14 @@ name = "mermaid"
 module = "datapattern.render.mermaid_renderer:MermaidRenderer"
 requires = ["mmdc"]
 deterministic = true
+
+[[renderer]]
+name = "schemdraw"
+module = "datapattern.render.schemdraw_renderer:SchemdrawRenderer"
+requires_py = ["schemdraw"] # MIT
+deterministic = true
+
+[[renderer]]
+name = "drawio"
+module = "datapattern.render.drawio_renderer:DrawioRenderer"
+deterministic = true # 出力は編集可能な .drawio ファイル（画像ではない）

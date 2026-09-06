@@ -146,12 +146,13 @@ datapattern render datapatterns.json --out out/ --method graphviz
 |-------|------|------|
 | `capital-datapattern-report` | オーケストレータ | パイプライン全体を実行し、パターン種別に応じてレンダラを選択、最終 `report.html` を提示 |
 | `capital-addon-analysis` | 解析 | Java アドオンの静的 + 意味解析手順、`DataPatternModel` の埋め方、Capital オブジェクト / プロパティ辞書（実物から漸進的に育てる） |
-| `datapattern-render-html` | レンダラ | Jinja2 の表 / カード（既定・ゼロ依存） |
-| `datapattern-render-wireviz` | レンダラ | ハーネス / 接続トポロジ図（`wireviz` CLI をサブプロセス起動。GPLv3） |
-| `datapattern-render-graphviz` | レンダラ | 抽象接続グラフ・決定木 |
-| `datapattern-render-mermaid` *(早期フォロー)* | レンダラ | 軽量・HTML 埋込 |
-| `datapattern-render-schemdraw` *(早期フォロー)* | レンダラ | 回路図シンボル（IEC 60617） |
-| `datapattern-render-drawio` *(任意)* | レンダラ | 編集可能な .drawio 出力 |
+| `datapattern-render-html` | レンダラ | Jinja2 の表（既定・ゼロ依存） |
+| `datapattern-render-svg` | レンダラ | ゼロ依存の簡易 SVG |
+| `datapattern-render-graphviz` | レンダラ | 抽象接続グラフ・決定木（`dot`） |
+| `datapattern-render-wireviz` | レンダラ | ハーネス図（`wireviz` CLI、GPLv3・非 import） |
+| `datapattern-render-mermaid` | レンダラ | Mermaid（`mmdc`） |
+| `datapattern-render-schemdraw` | レンダラ | IEC 回路図シンボル（`schemdraw`、MIT） |
+| `datapattern-render-drawio` | レンダラ | 編集可能 .drawio（画像でなくファイル、ゼロ依存） |
 
 各レンダラ skill は「契約（B 節）＋ その方式固有の実装ノウハウ ＋ 決定論化チェックリスト
 （[02 §B-5](02-datapattern-and-rendering.md#b-5-決定論化の共通ルール)）」を持つ。
@@ -288,7 +289,7 @@ docs/                                # 01〜03
 | 3 | 解析 | `static_scan.py` + `ingest.py` + `combos.py` + `capital-addon-analysis` skill | ✅ 完了（`ingest.py`＝manifest、`static_scan.py`＝regex スキャン→`evidence.json`（`evidence.schema.json` 準拠）、`combos.py`＝境界＋ペアワイズ＋排他違反。`datapattern ingest`/`scan`/`combos` 実働。tree-sitter-java は将来の高精度化オプション） |
 | 4 | オーケストレータ | `capital-datapattern-report` skill ＋ `datapattern run` で全パイプライン結線 | ✅ 完了（`orchestrate.py`＝`prepare_workspace`（ingest+scan+テンプレ）/`build_report`（validate+render+report）、`datapattern run --addon/--patterns`、`capital-datapattern-report` skill） |
 | 5 | レンダラ拡充 | `wireviz`（CLI 起動）+ `graphviz` + registry。未導入環境で `html` にフォールバック | ✅ 完了（`render/registry.py` + `renderers/registry.toml`、`graphviz_renderer`（DOT→`dot`）、`wireviz_renderer`（WireViz YAML→`wireviz`）、`--method auto` でパターン別選択。`dot`/`wireviz` 無しでも `html` に落ちて全テスト green） |
-| 6 | 早期フォロー | `mermaid` / `schemdraw` / `drawio` を **skill 追加のみ**で導入（疎結合の実証） | ✅ `mermaid` で実証（`render/mermaid_renderer.py` ＋ `registry.toml` 1 行 ＋ SKILL.md ＋ テスト の 4 ファイルのみ。契約・pipeline・registry・report・既存レンダラは無改修）。`schemdraw`（MIT, import 可）/ `drawio`（`drawpyo`）も同じレシピ |
+| 6 | レンダラ拡充 II | `mermaid` / `svg` / `schemdraw` / `drawio` を追加、`--method all/auto/カンマ`、レポートに方式タブ | ✅ 完了（7 方式。`svg`・`drawio` はゼロ依存、`schemdraw` は `requires_py`。各方式レンダラ + `registry.toml` 1 行のみで追加＝契約無改修） |
 
 ---
 

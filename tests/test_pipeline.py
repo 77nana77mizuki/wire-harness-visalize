@@ -18,8 +18,8 @@ class _FakeRegistry(Registry):
     def __init__(self) -> None:
         super().__init__(
             [
-                RendererEntry("html", "x:x", (), True, ()),
-                RendererEntry("alt", "x:x", (), True, ()),
+                RendererEntry("html", "x:x", (), (), True, ()),
+                RendererEntry("alt", "x:x", (), (), True, ()),
             ]
         )
         self._instances = {"html": HtmlRenderer(), "alt": _AltHtml()}

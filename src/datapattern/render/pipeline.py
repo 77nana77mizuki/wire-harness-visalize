@@ -94,10 +94,32 @@ def render_auto(model: DataPatternModel, registry, out_root: Path) -> RenderMani
 
 def render_all(model: DataPatternModel, registry, out_root: Path) -> RenderManifest:
     """パターンごとに、対応する利用可能レンダラ全部で描画する。"""
+    return _render_multi(
+        model, out_root, lambda p: registry.all_supporting(p.type, p.preferred_methods)
+    )
+
+
+def render_subset(
+    model: DataPatternModel, registry, names: list[str], out_root: Path
+) -> RenderManifest:
+    """指定した名前のレンダラのうち、各パターンを扱えるもので描画する。"""
+
+    def pick(pattern) -> list[Renderer]:
+        out: list[Renderer] = []
+        for name in names:
+            r = registry.get(name)
+            if r is not None and r.supports(pattern.type):
+                out.append(r)
+        return out
+
+    return _render_multi(model, out_root, pick)
+
+
+def _render_multi(model: DataPatternModel, out_root: Path, pick) -> RenderManifest:
     assets: list[Asset] = []
     skipped: list[str] = []
     for pattern in sorted(model.patterns, key=lambda p: p.id):
-        renderers = registry.all_supporting(pattern.type, pattern.preferred_methods)
+        renderers = pick(pattern)
         if not renderers:
             skipped.append(pattern.id)
             continue
