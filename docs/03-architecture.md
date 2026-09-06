@@ -147,12 +147,12 @@ datapattern render datapatterns.json --out out/ --method graphviz
 | `capital-datapattern-report` | オーケストレータ | パイプライン全体を実行し、パターン種別に応じてレンダラを選択、最終 `report.html` を提示 |
 | `capital-addon-analysis` | 解析 | Java アドオンの静的 + 意味解析手順、`DataPatternModel` の埋め方、Capital オブジェクト / プロパティ辞書（実物から漸進的に育てる） |
 | `datapattern-render-html` | レンダラ | Jinja2 の表（既定・ゼロ依存） |
-| `datapattern-render-svg` | レンダラ | ゼロ依存の簡易 SVG |
+| `datapattern-render-svg` | レンダラ | ゼロ依存の配線図 SVG（アース/スプライス/マルチコア束/シールド記号。共有シーン `render/_schematic.py`） |
 | `datapattern-render-graphviz` | レンダラ | 抽象接続グラフ・決定木（`dot`） |
 | `datapattern-render-wireviz` | レンダラ | ハーネス図（`wireviz` CLI、GPLv3・非 import） |
 | `datapattern-render-mermaid` | レンダラ | Mermaid（`mmdc`） |
 | `datapattern-render-schemdraw` | レンダラ | IEC 回路図シンボル（`schemdraw`、MIT） |
-| `datapattern-render-drawio` | レンダラ | 編集可能 .drawio（画像でなくファイル、ゼロ依存） |
+| `datapattern-render-drawio` | レンダラ | 編集可能 .drawio（`_schematic` 共有、⏚ 記号・多芯太線）。レポートは「draw.io で開く」リンク（#R 圧縮 URL）＋ XML 折りたたみ |
 
 各レンダラ skill は「契約（B 節）＋ その方式固有の実装ノウハウ ＋ 決定論化チェックリスト
 （[02 §B-5](02-datapattern-and-rendering.md#b-5-決定論化の共通ルール)）」を持つ。

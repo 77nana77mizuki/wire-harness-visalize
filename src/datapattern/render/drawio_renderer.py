@@ -1,37 +1,60 @@
 """``drawio`` レンダラ — 編集可能な .drawio（mxGraph XML）を手書き生成する（ゼロ依存）。
 
-drawpyo は GPLv3 なので使わず、XML を直接組む。出力は「画像」ではなく編集可能ファイル。
-レポートには XML を載せる（app.diagrams.net に貼り付け）。分類 circuit / option_config。
+drawpyo は GPLv3 なので使わず XML を直接組む。共有シーン（``_schematic.py``）を使い、
+Capital Logic 風の記号（アース記号 ⏚ / スプライスのドット / コネクタ / マルチコア太線 /
+シールド破線）に寄せる。circuit / option_config。出力は「画像」でなく編集可能ファイル。
 """
 
 from __future__ import annotations
 
-from itertools import pairwise
 from pathlib import Path
 from typing import ClassVar
 from xml.sax.saxutils import quoteattr
 
 from datapattern.model import Pattern
+from datapattern.render._schematic import SLink, SNode, build_scene
 from datapattern.render.base import Asset, RenderContext, Renderer
 
-_VS = "rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;"
-_SS = "ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;"
-_ES = "endArrow=none;html=1;"
+_STYLE = {
+    "connector": "rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#333333;",
+    "device": "rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;",
+    "fuse": "rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;",
+    "supply": "ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;",
+    "splice": "ellipse;whiteSpace=wrap;html=1;fillColor=#000000;strokeColor=#000000;",
+    "ground": (
+        "text;html=1;align=center;verticalAlign=top;fontSize=26;spacing=0;"
+        "strokeColor=none;fillColor=none;"
+    ),
+}
+_SIZE = {
+    "connector": (150, 60),
+    "device": (150, 60),
+    "fuse": (120, 50),
+    "supply": (54, 54),
+    "splice": (16, 16),
+    "ground": (40, 46),
+}
+_LINK_STYLE = {
+    "wire": "endArrow=none;html=1;strokeColor=#555555;",
+    "multicore": "endArrow=none;html=1;strokeWidth=3;strokeColor=#333333;",
+    "shield": "endArrow=none;html=1;dashed=1;strokeColor=#777777;",
+    "overbraid": "endArrow=none;html=1;strokeWidth=4;dashed=1;strokeColor=#999999;",
+}
 
 
-def _cell_vertex(cid: str, label: str, x: int, y: int, w: int, h: int, style: str) -> str:
+def _vertex(cid: str, label: str, x: float, y: float, w: int, h: int, style: str) -> str:
     return (
         f"<mxCell id={quoteattr(cid)} value={quoteattr(label)} style={quoteattr(style)} "
-        f'vertex="1" parent="1">'
-        f'<mxGeometry x="{x}" y="{y}" width="{w}" height="{h}" as="geometry"/></mxCell>'
+        'vertex="1" parent="1">'
+        f'<mxGeometry x="{x:.0f}" y="{y:.0f}" width="{w}" height="{h}" as="geometry"/></mxCell>'
     )
 
 
-def _cell_edge(cid: str, src: str, tgt: str, label: str) -> str:
+def _edge(cid: str, src: str, tgt: str, label: str, style: str) -> str:
     return (
-        f"<mxCell id={quoteattr(cid)} value={quoteattr(label)} style={quoteattr(_ES)} "
+        f"<mxCell id={quoteattr(cid)} value={quoteattr(label)} style={quoteattr(style)} "
         f'edge="1" parent="1" source={quoteattr(src)} target={quoteattr(tgt)}>'
-        f'<mxGeometry relative="1" as="geometry"/></mxCell>'
+        '<mxGeometry relative="1" as="geometry"/></mxCell>'
     )
 
 
@@ -39,49 +62,50 @@ def _wrap(cells: list[str]) -> str:
     inner = "".join(cells)
     return (
         '<mxfile host="datapattern"><diagram name="pattern">'
-        '<mxGraphModel dx="800" dy="600" grid="1" gridSize="10" guides="1" '
+        '<mxGraphModel dx="900" dy="640" grid="1" gridSize="10" guides="1" '
         'tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" '
-        'pageWidth="850" pageHeight="1100" math="0" shadow="0">'
+        'pageWidth="900" pageHeight="700" math="0" shadow="0">'
         f'<root><mxCell id="0"/><mxCell id="1" parent="0"/>{inner}</root>'
         "</mxGraphModel></diagram></mxfile>"
     )
 
 
+def _node_cell(n: SNode) -> str:
+    w, h = _SIZE[n.symbol]
+    label = "⏚" if n.symbol == "ground" else n.id
+    x, y = n.x, n.y
+    if n.symbol == "splice":
+        x, y = n.x - w / 2, n.y - h / 2
+    if n.symbol == "ground":
+        label = f"⏚&#10;{n.id}"
+    return _vertex(f"n_{n.id}", label, x, y, w, h, _STYLE[n.symbol])
+
+
+def _link_cell(idx: int, lk: SLink) -> str:
+    style = _LINK_STYLE.get(lk.kind, _LINK_STYLE["wire"])
+    if lk.kind == "multicore":
+        label = lk.label
+    elif lk.colors:
+        label = f"{lk.gauge or ''} {lk.colors[0]}".strip()
+    else:
+        label = lk.gauge or lk.label
+    return _edge(f"e_{idx}", f"n_{lk.a}", f"n_{lk.b}", label, style)
+
+
 def _circuit_xml(pattern: Pattern) -> str:
-    conn = pattern.connectivity
-    assert conn is not None
-    kinds = {n.id: n.kind for n in conn.nodes}
-    ids = [n.id for n in sorted(conn.nodes, key=lambda n: n.id)]
-    for e in conn.edges:
-        if e.via and e.via not in ids:
-            ids.append(e.via)
-
-    cells: list[str] = []
-    for i, nid in enumerate(ids):
-        x, y = 40 + (i % 4) * 200, 40 + (i // 4) * 140
-        if kinds.get(nid) == "splice":
-            cells.append(_cell_vertex(f"n_{nid}", nid, x + 60, y + 20, 40, 40, _SS))
-        else:
-            label = nid if kinds.get(nid) is None else f"{nid}&#10;({kinds[nid]})"
-            cells.append(_cell_vertex(f"n_{nid}", label, x, y, 160, 60, _VS))
-
-    for j, e in enumerate(sorted(conn.edges, key=lambda e: (e.source, e.target, e.via or ""))):
-        a, b = e.source.split(".")[0], e.target.split(".")[0]
-        tags = " ".join(t for t in (e.gauge, e.color, "shield" if e.shield else None) if t)
-        hops = [a, e.via, b] if e.via else [a, b]
-        for k, (p, q) in enumerate(pairwise(hops)):
-            cells.append(_cell_edge(f"e_{j}_{k}", f"n_{p}", f"n_{q}", tags if k == 0 else ""))
+    scene = build_scene(pattern)
+    cells = [_node_cell(n) for n in scene.nodes]
+    cells += [_link_cell(i, lk) for i, lk in enumerate(scene.links)]
     return _wrap(cells)
 
 
 def _option_config_xml(pattern: Pattern) -> str:
     root = pattern.option_expression or "option expression"
-    cells = [_cell_vertex("root", root, 40, 40, 220, 50, _VS)]
+    cells = [_vertex("root", root, 40, 40, 240, 50, _STYLE["connector"])]
     for i, r in enumerate(pattern.variant_matrix):
-        rid = f"v{i}"
         resolved = ", ".join(r.resolves_to) if r.resolves_to else "（空）"
-        cells.append(_cell_vertex(rid, resolved, 360, 40 + i * 80, 240, 50, _VS))
-        cells.append(_cell_edge(f"e{i}", "root", rid, r.expr))
+        cells.append(_vertex(f"v{i}", resolved, 380, 40 + i * 80, 260, 50, _STYLE["connector"]))
+        cells.append(_edge(f"e{i}", "root", f"v{i}", r.expr, _LINK_STYLE["wire"]))
     return _wrap(cells)
 
 

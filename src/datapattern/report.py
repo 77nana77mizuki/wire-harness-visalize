@@ -7,6 +7,9 @@
 
 from __future__ import annotations
 
+import base64
+import urllib.parse
+import zlib
 from html import escape
 from importlib import resources
 from pathlib import Path
@@ -33,6 +36,14 @@ def _load_template_source() -> str:
     return resources.files("datapattern.templates").joinpath("report.html.j2").read_text("utf-8")
 
 
+def _drawio_open_url(xml: str) -> str:
+    """draw.io の "URL に図を埋め込む" 形式（#R + rawDeflate → base64 → URI エンコード）。"""
+    co = zlib.compressobj(9, zlib.DEFLATED, -15)
+    packed = co.compress(xml.encode("utf-8")) + co.flush()
+    b64 = base64.b64encode(packed).decode("ascii")
+    return "https://app.diagrams.net/#R" + urllib.parse.quote(b64, safe="")
+
+
 def _figures_for(pattern: Pattern, manifest: RenderManifest) -> list[dict[str, str]]:
     figs: list[dict[str, str]] = []
     for asset in manifest.assets_for(pattern.id):
@@ -40,14 +51,13 @@ def _figures_for(pattern: Pattern, manifest: RenderManifest) -> list[dict[str, s
         if asset.kind == "svg":
             content = f'<div class="svg-wrap">{raw}</div>'
         elif asset.kind == "xml":
-            link = (
-                '<a href="https://app.diagrams.net/" target="_blank" '
-                'rel="noopener">app.diagrams.net</a>'
-            )
+            url = _drawio_open_url(raw)
             content = (
-                f'<p class="xml-note">編集可能ファイル。下の XML を {link} に貼り付け'
-                "（Extras → Edit Diagram）。</p>"
-                f'<pre class="xml">{escape(raw)}</pre>'
+                f'<p class="xml-note"><a class="btn" href="{escape(url)}" '
+                'target="_blank" rel="noopener">▸ draw.io で開く（編集可能）</a> '
+                "リンクが長すぎて開けない場合は下の XML をコピーしてください。</p>"
+                f"<details><summary>.drawio XML</summary>"
+                f'<pre class="xml">{escape(raw)}</pre></details>'
             )
         else:
             content = raw

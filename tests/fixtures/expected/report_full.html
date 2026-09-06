@@ -61,8 +61,12 @@ section.pattern:first-of-type { border-top: none; }
 .figpanel .method-tag { display: none; }
 .svg-wrap svg { background: #ffffff; border-radius: 4px; max-width: 100%; height: auto; display: block; }
 .xml-note { font-size: .82rem; color: var(--muted); margin: 0 0 .4rem; }
+.btn { display: inline-block; background: var(--accent); color: #fff; text-decoration: none;
+  padding: .3rem .7rem; border-radius: 5px; font-weight: 600; font-size: .85rem; margin-right: .4rem; }
+.figpanel details { margin-top: .3rem; }
+.figpanel summary { cursor: pointer; font-size: .8rem; color: var(--muted); }
 pre.xml { max-height: 340px; overflow: auto; font-size: .72rem; line-height: 1.4;
-  background: var(--panel); padding: .6rem; border-radius: 4px; white-space: pre; }
+  background: var(--panel); padding: .6rem; border-radius: 4px; white-space: pre; margin-top: .3rem; }
 /* radio N が checked → パネル N を表示 / ラベル N をアクティブ表示（最大 9 方式） */
 .figtabs > input.tabradio:nth-of-type(1):checked ~ .panels > .figpanel:nth-child(1),
 .figtabs > input.tabradio:nth-of-type(2):checked ~ .panels > .figpanel:nth-child(2),
