@@ -16,11 +16,11 @@ _SUPPLY_RE = re.compile(r"(?:batt|^b\+|kl30|^bat$|power|^pwr$|feed|source|^src$)
 _FUSE_RE = re.compile(r"(?:^f\d|fuse|fusible|relay|^k\d)", re.IGNORECASE)
 _OVERBRAID_RE = re.compile(r"(?:ob\d*|braid|overbraid)", re.IGNORECASE)
 
-COL_PITCH = 210
-ROW_PITCH = 96
-MARGIN = 44
-NODE_W = 124
-NODE_H = 44
+COL_PITCH = 220
+ROW_PITCH = 108
+MARGIN = 40
+NODE_W = 128
+NODE_H = 46
 
 
 @dataclass(frozen=True, slots=True)
@@ -41,6 +41,8 @@ class SNode:
     y: float = 0
     w: float = NODE_W
     h: float = NODE_H
+    pincount: int = 0
+    sub: str = ""  # 副題（"8-pos · Molex" など）
     pins: dict[str, SPin] = field(default_factory=dict)
 
     @property
@@ -252,6 +254,8 @@ def build_scene(pattern: Pattern) -> Scene:
     conn: Connectivity | None = pattern.connectivity
     assert conn is not None
     node_kinds = {n.id: n.kind for n in conn.nodes}
+    node_pc = {n.id: (n.pincount or len(n.pinlabels) or 0) for n in conn.nodes}
+    obj_by_ref = {o.ref: o for o in pattern.capital_objects if o.ref}
 
     links, _cable_vias, _ = _build_links(conn)
     endpoints = {p for lk in links for p in (lk.a, lk.b)}
@@ -265,20 +269,38 @@ def build_scene(pattern: Pattern) -> Scene:
     }
     max_rows = max(rows_in_col.values(), default=1)
 
+    def _subtitle(nid: str) -> str:
+        bits: list[str] = []
+        pc = node_pc.get(nid, 0)
+        if pc:
+            bits.append(f"{pc}-pos")
+        o = obj_by_ref.get(nid)
+        if o:
+            mfr = o.properties.get("manufacturer") or o.properties.get("mfr")
+            pn = o.properties.get("partNumber") or o.properties.get("pn")
+            if mfr:
+                bits.append(str(mfr))
+            elif pn:
+                bits.append(str(pn))
+        return " · ".join(bits)
+
     scene = Scene(links=links)
     for i in sorted(ids):
-        w, h = _node_size(symbols[i])
+        sym = symbols[i]
+        w, h = _node_size(sym)
+        pc = node_pc.get(i, 0)
+        if sym in {"connector", "device"} and pc > 2:
+            h = max(h, 22 + pc * 15)
         c, r = col[i], row[i]
         n_rows = rows_in_col.get(c, 1)
         x = MARGIN + c * COL_PITCH
-        # 列内で縦中央寄せ
         y = MARGIN + (r + (max_rows - n_rows) / 2) * ROW_PITCH
-        scene.nodes.append(SNode(i, symbols[i], c, r, x + (NODE_W - w) / 2, y, w, h))
+        scene.nodes.append(SNode(i, sym, c, r, x + (NODE_W - w) / 2, y, w, h, pc, _subtitle(i)))
 
     _place_pins(scene, links)
 
     ncols = max(col.values(), default=0) + 1
     scene.width = MARGIN * 2 + (ncols - 1) * COL_PITCH + NODE_W
     bottom = max((n.y + n.h for n in scene.nodes), default=MARGIN)
-    scene.height = bottom + MARGIN + 24  # 24 = アース記号や下ラベルの余白
+    scene.height = bottom + 56  # アース記号・下ラベル・タイトルブロックの余白
     return scene
