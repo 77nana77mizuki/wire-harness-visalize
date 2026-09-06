@@ -19,6 +19,12 @@ PropertyScalar = str | int | float | bool | None
 _SCHEMA_RESOURCE = "datapattern.schema.json"
 
 
+def load_named_schema(filename: str) -> dict[str, Any]:
+    """``datapattern/schema/`` 配下の任意の JSON Schema を辞書で返す。"""
+    text = resources.files("datapattern.schema").joinpath(filename).read_text("utf-8")
+    return json.loads(text)
+
+
 class SchemaValidationError(ValueError):
     """``DataPatternModel`` が JSON Schema に適合しないとき送出される。
 
@@ -32,9 +38,17 @@ class SchemaValidationError(ValueError):
 
 
 def load_schema() -> dict[str, Any]:
-    """同梱の JSON Schema を辞書として返す。"""
-    text = resources.files("datapattern.schema").joinpath(_SCHEMA_RESOURCE).read_text("utf-8")
-    return json.loads(text)
+    """``DataPatternModel`` の JSON Schema を辞書として返す。"""
+    return load_named_schema(_SCHEMA_RESOURCE)
+
+
+def validate_against(data: Any, schema: dict[str, Any]) -> None:
+    """``data`` を任意の ``schema`` で検証する。適合しなければ :class:`SchemaValidationError`。"""
+    validator_cls = jsonschema.validators.validator_for(schema)
+    validator = validator_cls(schema)
+    errors = sorted(validator.iter_errors(data), key=lambda e: (list(e.absolute_path), e.message))
+    if errors:
+        raise SchemaValidationError([_format_error(e) for e in errors])
 
 
 def _format_error(err: jsonschema.ValidationError) -> str:
@@ -43,12 +57,8 @@ def _format_error(err: jsonschema.ValidationError) -> str:
 
 
 def validate_model_dict(data: Any) -> None:
-    """``data`` を JSON Schema で検証する。適合しなければ :class:`SchemaValidationError`。"""
-    validator_cls = jsonschema.validators.validator_for(load_schema())
-    validator = validator_cls(load_schema())
-    errors = sorted(validator.iter_errors(data), key=lambda e: (list(e.absolute_path), e.message))
-    if errors:
-        raise SchemaValidationError([_format_error(e) for e in errors])
+    """``data`` を ``DataPatternModel`` スキーマで検証する。"""
+    validate_against(data, load_schema())
 
 
 # --------------------------------------------------------------------------- #

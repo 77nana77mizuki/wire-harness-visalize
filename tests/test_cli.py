@@ -37,11 +37,32 @@ def test_schema_path_only(capsys):
     assert capsys.readouterr().out.strip().endswith("datapattern.schema.json")
 
 
-@pytest.mark.parametrize("cmd", ["ingest", "scan", "run"])
+@pytest.mark.parametrize("cmd", ["run"])
 def test_stub_commands(capsys, cmd):
     rc = main([cmd])
     assert rc == 3
     assert "未実装" in capsys.readouterr().err
+
+
+def test_ingest_cmd(capsys, tmp_path, fixtures_dir):
+    rc = main(["ingest", str(fixtures_dir / "sample_addon"), "--out", str(tmp_path)])
+    assert rc == 0
+    assert (tmp_path / "workspace" / "manifest.json").is_file()
+    assert "files" in capsys.readouterr().out
+
+
+def test_scan_cmd(capsys, tmp_path, fixtures_dir):
+    rc = main(["scan", str(fixtures_dir / "sample_addon"), "--out", str(tmp_path)])
+    assert rc == 0
+    ev = json.loads((tmp_path / "workspace" / "evidence.json").read_text("utf-8"))
+    assert ev["pluginTypeGuess"] in {"check", "action"}
+
+
+def test_combos_cmd(capsys):
+    rc = main(["combos", "--codes", "OPT_A,OPT_B", "--exclusive", "OPT_A:OPT_B"])
+    assert rc == 0
+    out = json.loads(capsys.readouterr().out)
+    assert any(c["label"] == "exclusive-violation:OPT_A+OPT_B" for c in out)
 
 
 def test_report_end_to_end(capsys, tmp_path, fixtures_dir):

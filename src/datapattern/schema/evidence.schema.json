@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fujitsu.example/wire-harness-visalize/evidence.schema.json",
+  "title": "Evidence",
+  "description": "static_scan.py が Java アドオンソースから機械抽出した事実。capital-addon-analysis skill の入力。意味解釈は含まない。",
+  "type": "object",
+  "required": ["schemaVersion", "manifestDigest", "pluginTypeGuess", "findings"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "type": "string", "pattern": "^\\d+\\.\\d+$" },
+    "manifestDigest": {
+      "description": "対応する manifest.json の digest。",
+      "type": "string"
+    },
+    "scanner": {
+      "description": "スキャナ名とバージョン、方式（regex / tree-sitter）。",
+      "type": "string"
+    },
+    "pluginTypeGuess": {
+      "type": "string",
+      "enum": ["check", "action", "report", "ui", "unknown"]
+    },
+    "pluginTypeEvidence": {
+      "description": "pluginTypeGuess の根拠（'Foo implements IXDrcCheck' など）。",
+      "type": "array",
+      "items": { "$ref": "#/$defs/ref" }
+    },
+    "findings": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "capitalImports": {
+          "description": "Capital 由来と思われる import 完全修飾名（重複なし・ソート済み）。",
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "ixTypes": {
+          "description": "参照された IX* 型（名前 → 参照位置）。",
+          "type": "array",
+          "items": { "$ref": "#/$defs/named" }
+        },
+        "propertyKeys": {
+          "description": "get/set(Property|Attribute) 等で使われた文字列キー。",
+          "type": "array",
+          "items": { "$ref": "#/$defs/named" }
+        },
+        "optionApiCalls": {
+          "description": "option / variant / module code を扱っていそうな箇所。",
+          "type": "array",
+          "items": { "$ref": "#/$defs/snippet" }
+        },
+        "verdictBranches": {
+          "description": "DRC の合否・警告・エラー報告に見える分岐。",
+          "type": "array",
+          "items": { "$ref": "#/$defs/snippet" }
+        },
+        "collectionsIterated": {
+          "description": "走査されている Capital オブジェクトのコレクション名。",
+          "type": "array",
+          "items": { "$ref": "#/$defs/named" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "ref": { "type": "string", "minLength": 1 },
+    "named": {
+      "type": "object",
+      "required": ["name", "refs"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "refs": { "type": "array", "items": { "$ref": "#/$defs/ref" } }
+      }
+    },
+    "snippet": {
+      "type": "object",
+      "required": ["ref", "text"],
+      "additionalProperties": false,
+      "properties": {
+        "ref": { "$ref": "#/$defs/ref" },
+        "text": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

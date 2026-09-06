@@ -1,7 +1,7 @@
 """``datapattern`` コマンドライン。
 
-実働: ``validate`` / ``schema`` / ``render`` / ``report``。
-骨組み: ``ingest`` / ``scan`` / ``run``（ロードマップ ``docs/03-architecture.md`` §H）。
+実働: ``ingest`` / ``scan`` / ``combos`` / ``validate`` / ``schema`` / ``render`` / ``report``。
+骨組み: ``run``（ロードマップ ``docs/03-architecture.md`` §H）。
 """
 
 from __future__ import annotations
@@ -17,8 +17,6 @@ from datapattern.model import SchemaValidationError, load_model, load_schema
 from datapattern.render.base import Renderer
 
 _NOT_IMPLEMENTED_PHASE = {
-    "ingest": "第3弾",
-    "scan": "第3弾",
     "run": "第4弾",
 }
 
@@ -100,6 +98,54 @@ def _cmd_report(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_ingest(args: argparse.Namespace) -> int:
+    from datapattern.ingest import build_manifest, write_manifest
+
+    try:
+        manifest = build_manifest(args.src)
+    except (OSError, NotADirectoryError) as exc:
+        raise CliError(f"cannot read source dir {args.src}: {exc}", code=2) from None
+    out = write_manifest(manifest, args.out / "workspace" / "manifest.json")
+    print(f"ingest: {len(manifest.files)} files → {out}  ({manifest.digest})")
+    return 0
+
+
+def _cmd_scan(args: argparse.Namespace) -> int:
+    from datapattern.ingest import build_manifest, write_manifest
+    from datapattern.static_scan import scan, write_evidence
+
+    try:
+        manifest = build_manifest(args.src)
+    except (OSError, NotADirectoryError) as exc:
+        raise CliError(f"cannot read source dir {args.src}: {exc}", code=2) from None
+    write_manifest(manifest, args.out / "workspace" / "manifest.json")
+    evidence = scan(manifest)
+    out = write_evidence(evidence, args.out / "workspace" / "evidence.json")
+    f = evidence["findings"]
+    print(
+        f"scan: pluginType={evidence['pluginTypeGuess']}, "
+        f"IX型={len(f['ixTypes'])}, プロパティキー={len(f['propertyKeys'])}, "
+        f"option箇所={len(f['optionApiCalls'])} → {out}"
+    )
+    return 0
+
+
+def _cmd_combos(args: argparse.Namespace) -> int:
+    from datapattern.combos import generate_combos
+
+    codes = [c.strip() for c in args.codes.split(",") if c.strip()]
+    exclusive = [[x.strip() for x in g.split(":") if x.strip()] for g in (args.exclusive or [])]
+    combos = generate_combos(codes, exclusive=exclusive)
+    json.dump(
+        [{"label": c.label, "assignment": c.assignment, "expr": c.expr()} for c in combos],
+        sys.stdout,
+        ensure_ascii=False,
+        indent=2,
+    )
+    sys.stdout.write("\n")
+    return 0
+
+
 def _cmd_stub(args: argparse.Namespace) -> int:
     phase = _NOT_IMPLEMENTED_PHASE.get(args.command, "未定")
     print(
@@ -143,7 +189,27 @@ def build_parser() -> argparse.ArgumentParser:
     p_report.add_argument("--method", default="html", help="レンダラ名（既定: html）")
     p_report.set_defaults(func=_cmd_report)
 
-    for name in ("ingest", "scan", "run"):
+    p_ingest = sub.add_parser("ingest", help="ソースツリーを manifest.json に正規化する")
+    p_ingest.add_argument("src", type=Path, help="アドオンのソースディレクトリ")
+    p_ingest.add_argument("--out", type=Path, default=Path("out"), help="出力先（既定: out/）")
+    p_ingest.set_defaults(func=_cmd_ingest)
+
+    p_scan = sub.add_parser("scan", help="Java ソースから evidence.json を抽出する（ingest 込み）")
+    p_scan.add_argument("src", type=Path, help="アドオンのソースディレクトリ")
+    p_scan.add_argument("--out", type=Path, default=Path("out"), help="出力先（既定: out/）")
+    p_scan.set_defaults(func=_cmd_scan)
+
+    p_combos = sub.add_parser("combos", help="option コード組合せ（境界＋ペアワイズ）を生成する")
+    p_combos.add_argument("--codes", required=True, help="カンマ区切りの option コード")
+    p_combos.add_argument(
+        "--exclusive",
+        action="append",
+        metavar="A:B[:C]",
+        help="相互排他グループ（複数指定可）",
+    )
+    p_combos.set_defaults(func=_cmd_combos)
+
+    for name in ("run",):
         p = sub.add_parser(name, help=f"[未実装] {name}")
         p.set_defaults(func=_cmd_stub)
 
