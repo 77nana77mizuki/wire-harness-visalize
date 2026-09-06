@@ -23,7 +23,18 @@ uv run datapattern schema                                   # 同梱 JSON Schema
 
 エンドツーエンド（`datapattern run --addon <src>` → LLM で `datapatterns.json` →
 `datapattern run --patterns`）は `capital-datapattern-report` skill を参照。
-`dot` / `wireviz` を入れると図がリッチになる（無くても `html` で動く）。
+
+図をリッチにする（任意 / 無くても `html` にフォールバック）:
+
+```sh
+brew install graphviz                       # circuit の抽象グラフ・option 決定木
+uv pip install wireviz                       # circuit をハーネス風に（色つき電線・ピンアウト）。GPLv3
+npm i -g @mermaid-js/mermaid-cli             # circuit / option を Mermaid で
+```
+
+`examples/capital-drawing-patterns.json` は 16 種の図面パターン（分岐 / マルチコア /
+シールド / アース接地 / デイジーチェーン / ハイウェイ / インライン / 配電 / オーバーブレード /
+オプション構成 / プロパティ境界）を収めた検証用データセット。
 
 ## ドキュメント
 

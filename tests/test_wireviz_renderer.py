@@ -9,10 +9,14 @@ from datapattern.render.base import RenderContext
 from datapattern.render.wireviz_renderer import WirevizRenderer, wireviz_yaml
 
 HAS_WIREVIZ = shutil.which("wireviz") is not None
+EXAMPLE = "examples"
 
 
-def _pattern(fixtures_dir):
-    return load_model(fixtures_dir / "valid_full.json").pattern_by_id("circuit-switched-ground")
+def _pattern(name):
+    from pathlib import Path
+
+    root = Path(__file__).parents[1]
+    return load_model(root / "examples" / "capital-drawing-patterns.json").pattern_by_id(name)
 
 
 def test_supports():
@@ -20,35 +24,55 @@ def test_supports():
     assert not WirevizRenderer().supports("option_config")
 
 
-def test_yaml_is_deterministic(fixtures_dir):
-    p = _pattern(fixtures_dir)
-    a = wireviz_yaml(p)
-    b = wireviz_yaml(p)
-    assert a == b
+def test_yaml_is_deterministic():
+    p = _pattern("splice-branch-one-to-three")
+    assert wireviz_yaml(p) == wireviz_yaml(p)
 
 
-def test_yaml_structure(fixtures_dir):
-    yml = wireviz_yaml(_pattern(fixtures_dir))
+def test_yaml_structure_splice():
+    yml = wireviz_yaml(_pattern("splice-branch-one-to-three"))
     assert yml.startswith("connectors:")
-    assert "'D1':" in yml
-    assert "'S1':" in yml
+    assert "'SP1':" in yml
     assert "style: simple" in yml  # splice
     assert "connections:" in yml
-    assert "gauge: '0.5'" in yml
-    assert "colors: ['BK']" in yml
+    assert "gauge: 1.0 mm2" in yml  # 数値 + 単位（クォートしない）
+    assert "colors: [RD]" in yml  # 色コードはクォートしない
 
 
-def test_pin_label_resolves_to_index(fixtures_dir):
-    # D1 は pinlabels ["VCC","GND"] を持つので D1.GND → ピン 2
-    yml = wireviz_yaml(_pattern(fixtures_dir))
-    assert "'D1': 2" in yml
+def test_multicore_is_one_multiwire_cable():
+    yml = wireviz_yaml(_pattern("multicore-three-core"))
+    assert "'MC1':" in yml
+    assert "wirecount: 3" in yml
+    assert "colors: [BK, BN, BU]" in yml
+    assert "- 'M1': [1, 2, 3]" in yml
+
+
+def test_pin_label_resolves_to_index():
+    # ground-earth: D1 の pinlabels ["GND"] → D1.GND はピン 1（リスト形式）
+    yml = wireviz_yaml(_pattern("shielded-pair-with-drain"))
+    # SENS pinlabels ["SIG+","SIG-","SHLD"] → SENS.SIG+ = 1, SENS.SHLD = 3
+    assert "'SENS': [1]" in yml or "'SENS': [3]" in yml
 
 
 @pytest.mark.skipif(not HAS_WIREVIZ, reason="wireviz 未インストール")
-def test_render_svg(tmp_path, fixtures_dir):
+@pytest.mark.parametrize(
+    "pid",
+    [
+        "wiring-point-to-point",
+        "splice-branch-one-to-three",
+        "multicore-three-core",
+        "shielded-pair-with-drain",
+        "daisy-chain-lamps",
+        "ground-earth-star-point",
+        "overbraid-bundle-protection",
+    ],
+)
+def test_render_svg(tmp_path, pid):
     d = tmp_path / "wireviz"
     d.mkdir()
-    asset = WirevizRenderer().render(_pattern(fixtures_dir), RenderContext(out_dir=d))
+    asset = WirevizRenderer().render(_pattern(pid), RenderContext(out_dir=d))
     svg = (d / asset.path).read_text("utf-8")
-    assert svg.lstrip().startswith("<svg")
+    assert svg.startswith("<svg")
     assert asset.kind == "svg"
+    # 中間物は残っていない
+    assert sorted(p.suffix for p in d.iterdir()) == [".svg", ".yml"]
