@@ -48,20 +48,33 @@ ul.tight li { margin: .1rem 0; }
 section.pattern { margin: 1.6rem 0; padding-top: .6rem; border-top: 1px dashed var(--border); }
 section.pattern:first-of-type { border-top: none; }
 
-/* --- 図: 実現方式タブ --- */
-.figtabs { margin: .6rem 0 0; }
+/* --- 図: 実現方式タブ（純 CSS。radio + :checked ~ sibling） --- */
+.figtabs { margin: .6rem 0 0; position: relative; }
+.figtabs > input.tabradio { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 .tablist { display: flex; flex-wrap: wrap; gap: .25rem; margin-bottom: -1px; }
-.tab { font: inherit; font-size: .82rem; padding: .3rem .8rem; cursor: pointer;
+.tablist > label { font-size: .82rem; padding: .3rem .8rem; cursor: pointer;
   background: var(--panel); color: var(--muted);
   border: 1px solid var(--border); border-bottom: none;
-  border-radius: 5px 5px 0 0; }
-.tab.active { background: var(--bg); color: var(--fg); font-weight: 600; }
-.figpanel { display: none; border: 1px solid var(--border); border-radius: 0 5px 5px 5px;
+  border-radius: 5px 5px 0 0; user-select: none; }
+.panels > .figpanel { display: none; border: 1px solid var(--border); border-radius: 0 5px 5px 5px;
   padding: .8rem; overflow-x: auto; }
-.figpanel.active { display: block; }
 .figpanel .method-tag { display: none; }
-.svg-wrap { }
 .svg-wrap svg { background: #ffffff; border-radius: 4px; max-width: 100%; height: auto; display: block; }
+/* radio N が checked → パネル N を表示 / ラベル N をアクティブ表示（最大 6 方式） */
+.figtabs > input.tabradio:nth-of-type(1):checked ~ .panels > .figpanel:nth-child(1),
+.figtabs > input.tabradio:nth-of-type(2):checked ~ .panels > .figpanel:nth-child(2),
+.figtabs > input.tabradio:nth-of-type(3):checked ~ .panels > .figpanel:nth-child(3),
+.figtabs > input.tabradio:nth-of-type(4):checked ~ .panels > .figpanel:nth-child(4),
+.figtabs > input.tabradio:nth-of-type(5):checked ~ .panels > .figpanel:nth-child(5),
+.figtabs > input.tabradio:nth-of-type(6):checked ~ .panels > .figpanel:nth-child(6) { display: block; }
+.figtabs > input.tabradio:nth-of-type(1):checked ~ .tablist > label:nth-child(1),
+.figtabs > input.tabradio:nth-of-type(2):checked ~ .tablist > label:nth-child(2),
+.figtabs > input.tabradio:nth-of-type(3):checked ~ .tablist > label:nth-child(3),
+.figtabs > input.tabradio:nth-of-type(4):checked ~ .tablist > label:nth-child(4),
+.figtabs > input.tabradio:nth-of-type(5):checked ~ .tablist > label:nth-child(5),
+.figtabs > input.tabradio:nth-of-type(6):checked ~ .tablist > label:nth-child(6) {
+  background: var(--bg); color: var(--fg); font-weight: 600; }
+.figtabs > input.tabradio:focus-visible ~ .tablist > label { outline: 2px solid var(--accent); }
 
 footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border); color: var(--muted); font-size: .82rem; }
 
@@ -71,7 +84,7 @@ footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border
   section.pattern { break-inside: avoid; }
   table.grid thead th { position: static; }
   .tablist { display: none; }
-  .figpanel { display: block; break-inside: avoid; border-radius: 5px; margin-top: .4rem; }
+  .panels > .figpanel { display: block !important; break-inside: avoid; border-radius: 5px; margin-top: .4rem; }
   .figpanel .method-tag { display: block; font-size: .75rem; color: var(--muted); margin-bottom: .3rem; }
 }
 </style>
@@ -132,10 +145,10 @@ footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border
       <tr><th>ID</th><td><code>circuit-switched-ground</code></td></tr>
       <tr><th>概要</th><td>device 2 個をスプライス経由で接地する最小構成。</td></tr>
       <tr><th>なぜ必要か</th><td>アドオンがスプライス経由の経路をたどれるか確認するため。</td></tr>    </tbody>
-  </table>  <div class="figtabs" data-tabs>
-    <div class="tablist">      <button class="tab active" data-target="fig-circuit-switched-ground-0">html</button>    </div>    <div class="figpanel active" id="fig-circuit-switched-ground-0">
-      <div class="method-tag">html</div>
-      <p class="subhead" style="font-weight:600;color:var(--muted);margin:.6rem 0 .2rem">ノード</p>
+  </table>  <div class="figtabs">    <input class="tabradio" type="radio" name="tabs-circuit-switched-ground" id="tab-circuit-switched-ground-0" checked>    <div class="tablist">      <label for="tab-circuit-switched-ground-0">html</label>    </div>
+    <div class="panels">      <div class="figpanel">
+        <div class="method-tag">html</div>
+        <p class="subhead" style="font-weight:600;color:var(--muted);margin:.6rem 0 .2rem">ノード</p>
 <table class="grid">
   <thead><tr>
     <th>id</th>
@@ -164,17 +177,18 @@ footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border
     <tr><td>S1</td><td>X1.1</td><td class="dp-empty">—</td><td>0.5</td><td>BK</td><td>false</td></tr>
   </tbody>
 </table>
-    </div>  </div></section><section class="pattern" id="opt-cfg-all-false">
+      </div>    </div>
+  </div></section><section class="pattern" id="opt-cfg-all-false">
   <h3>全 option が false のとき対象が空になる <span class="badge option_config">option_config</span></h3>
   <table class="grid">
     <tbody>
       <tr><th>ID</th><td><code>opt-cfg-all-false</code></td></tr>
       <tr><th>概要</th><td>option 式 OPT_GND が false のとき、DRC の対象コネクタが 0 件になる境界。</td></tr>
       <tr><th>なぜ必要か</th><td>アドオンが空コレクションで NPE を起こさないか確認するため。</td></tr>      <tr><th>option 式</th><td><code>OPT_GND</code></td></tr>      <tr><th>テストのヒント</th><td><ul class="tight"><li>OPT_GND=0 で DRC を実行し、警告 0 件・例外なしを確認</li>      </ul></td></tr>      <tr><th>根拠</th><td><code>src/main/java/com/example/GroundCircuitDrc.java#L44-L52</code>      </td></tr>    </tbody>
-  </table>  <div class="figtabs" data-tabs>
-    <div class="tablist">      <button class="tab active" data-target="fig-opt-cfg-all-false-0">html</button>    </div>    <div class="figpanel active" id="fig-opt-cfg-all-false-0">
-      <div class="method-tag">html</div>
-      <table class="grid">
+  </table>  <div class="figtabs">    <input class="tabradio" type="radio" name="tabs-opt-cfg-all-false" id="tab-opt-cfg-all-false-0" checked>    <div class="tablist">      <label for="tab-opt-cfg-all-false-0">html</label>    </div>
+    <div class="panels">      <div class="figpanel">
+        <div class="method-tag">html</div>
+        <table class="grid">
   <thead><tr>
     <th>option 値の組</th>
     <th>解決後に残るオブジェクト</th>
@@ -184,17 +198,18 @@ footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border
     <tr><td>OPT_GND=1</td><td>X1, W1</td></tr>
   </tbody>
 </table>
-    </div>  </div></section><section class="pattern" id="prop-wire-csa-lower-bound">
+      </div>    </div>
+  </div></section><section class="pattern" id="prop-wire-csa-lower-bound">
   <h3>電線 CSA の下限境界 <span class="badge property_set">property_set</span></h3>
   <table class="grid">
     <tbody>
       <tr><th>ID</th><td><code>prop-wire-csa-lower-bound</code></td></tr>
       <tr><th>概要</th><td>wire の断面積を仕様下限 0.35mm2 に設定したケース。</td></tr>
       <tr><th>なぜ必要か</th><td>アドオンの CSA 下限チェックが境界値でどう判定するか確認するため。</td></tr>      <tr><th>テストのヒント</th><td><ul class="tight"><li>0.35 は合格、0.34 は違反になることを確認</li>      </ul></td></tr>    </tbody>
-  </table>  <div class="figtabs" data-tabs>
-    <div class="tablist">      <button class="tab active" data-target="fig-prop-wire-csa-lower-bound-0">html</button>    </div>    <div class="figpanel active" id="fig-prop-wire-csa-lower-bound-0">
-      <div class="method-tag">html</div>
-      <table class="grid">
+  </table>  <div class="figtabs">    <input class="tabradio" type="radio" name="tabs-prop-wire-csa-lower-bound" id="tab-prop-wire-csa-lower-bound-0" checked>    <div class="tablist">      <label for="tab-prop-wire-csa-lower-bound-0">html</label>    </div>
+    <div class="panels">      <div class="figpanel">
+        <div class="method-tag">html</div>
+        <table class="grid">
   <thead><tr>
     <th>対象</th>
     <th>プロパティ</th>
@@ -217,22 +232,10 @@ footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border
     <tr><td>W1</td><td>wire</td><td>csa=0.35</td></tr>
   </tbody>
 </table>
-    </div>  </div></section>
+      </div>    </div>
+  </div></section>
 <footer>
   DataPatternModel v1.0 / 生成: capital-addon-analysis@0.1.0</footer>
 </main>
-<script>
-document.querySelectorAll('[data-tabs]').forEach(function (box) {
-  box.querySelectorAll('.tab').forEach(function (tab) {
-    tab.addEventListener('click', function () {
-      box.querySelectorAll('.tab').forEach(function (t) { t.classList.remove('active'); });
-      box.querySelectorAll('.figpanel').forEach(function (p) { p.classList.remove('active'); });
-      tab.classList.add('active');
-      var panel = box.querySelector('#' + CSS.escape(tab.dataset.target));
-      if (panel) panel.classList.add('active');
-    });
-  });
-});
-</script>
 </body>
 </html>

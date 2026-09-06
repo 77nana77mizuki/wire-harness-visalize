@@ -40,9 +40,11 @@ def test_report_structure(tmp_path, fixtures_dir):
     assert "<code>OPT_GND</code>" in html
     assert "OPT_GND=0 で DRC を実行" in html  # testHints
     assert "GroundCircuitDrc.java#L44-L52" in html  # per-pattern sourceRefs
-    # 図タブ
+    # 図タブ（純 CSS: radio + label）
     assert 'class="figtabs"' in html
-    assert '<button class="tab active"' in html
+    assert '<input class="tabradio" type="radio"' in html
+    assert 'name="tabs-opt-cfg-all-false"' in html
+    assert "<script" not in html  # JS 不使用
     # フッターに生成器、タイムスタンプは無い
     assert "capital-addon-analysis@0.1.0" in html
     assert "202" not in html.split("<footer>")[1]

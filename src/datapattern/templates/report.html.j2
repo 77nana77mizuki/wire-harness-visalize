@@ -48,20 +48,33 @@ ul.tight li { margin: .1rem 0; }
 section.pattern { margin: 1.6rem 0; padding-top: .6rem; border-top: 1px dashed var(--border); }
 section.pattern:first-of-type { border-top: none; }
 
-/* --- 図: 実現方式タブ --- */
-.figtabs { margin: .6rem 0 0; }
+/* --- 図: 実現方式タブ（純 CSS。radio + :checked ~ sibling） --- */
+.figtabs { margin: .6rem 0 0; position: relative; }
+.figtabs > input.tabradio { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 .tablist { display: flex; flex-wrap: wrap; gap: .25rem; margin-bottom: -1px; }
-.tab { font: inherit; font-size: .82rem; padding: .3rem .8rem; cursor: pointer;
+.tablist > label { font-size: .82rem; padding: .3rem .8rem; cursor: pointer;
   background: var(--panel); color: var(--muted);
   border: 1px solid var(--border); border-bottom: none;
-  border-radius: 5px 5px 0 0; }
-.tab.active { background: var(--bg); color: var(--fg); font-weight: 600; }
-.figpanel { display: none; border: 1px solid var(--border); border-radius: 0 5px 5px 5px;
+  border-radius: 5px 5px 0 0; user-select: none; }
+.panels > .figpanel { display: none; border: 1px solid var(--border); border-radius: 0 5px 5px 5px;
   padding: .8rem; overflow-x: auto; }
-.figpanel.active { display: block; }
 .figpanel .method-tag { display: none; }
-.svg-wrap { }
 .svg-wrap svg { background: #ffffff; border-radius: 4px; max-width: 100%; height: auto; display: block; }
+/* radio N が checked → パネル N を表示 / ラベル N をアクティブ表示（最大 6 方式） */
+.figtabs > input.tabradio:nth-of-type(1):checked ~ .panels > .figpanel:nth-child(1),
+.figtabs > input.tabradio:nth-of-type(2):checked ~ .panels > .figpanel:nth-child(2),
+.figtabs > input.tabradio:nth-of-type(3):checked ~ .panels > .figpanel:nth-child(3),
+.figtabs > input.tabradio:nth-of-type(4):checked ~ .panels > .figpanel:nth-child(4),
+.figtabs > input.tabradio:nth-of-type(5):checked ~ .panels > .figpanel:nth-child(5),
+.figtabs > input.tabradio:nth-of-type(6):checked ~ .panels > .figpanel:nth-child(6) { display: block; }
+.figtabs > input.tabradio:nth-of-type(1):checked ~ .tablist > label:nth-child(1),
+.figtabs > input.tabradio:nth-of-type(2):checked ~ .tablist > label:nth-child(2),
+.figtabs > input.tabradio:nth-of-type(3):checked ~ .tablist > label:nth-child(3),
+.figtabs > input.tabradio:nth-of-type(4):checked ~ .tablist > label:nth-child(4),
+.figtabs > input.tabradio:nth-of-type(5):checked ~ .tablist > label:nth-child(5),
+.figtabs > input.tabradio:nth-of-type(6):checked ~ .tablist > label:nth-child(6) {
+  background: var(--bg); color: var(--fg); font-weight: 600; }
+.figtabs > input.tabradio:focus-visible ~ .tablist > label { outline: 2px solid var(--accent); }
 
 footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border); color: var(--muted); font-size: .82rem; }
 
@@ -71,7 +84,7 @@ footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border
   section.pattern { break-inside: avoid; }
   table.grid thead th { position: static; }
   .tablist { display: none; }
-  .figpanel { display: block; break-inside: avoid; border-radius: 5px; margin-top: .4rem; }
+  .panels > .figpanel { display: block !important; break-inside: avoid; border-radius: 5px; margin-top: .4rem; }
   .figpanel .method-tag { display: block; font-size: .75rem; color: var(--muted); margin-bottom: .3rem; }
 }
 </style>
@@ -143,18 +156,23 @@ footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border
 
   {%- set figs = figures[p.id] %}
   {%- if figs %}
-  <div class="figtabs" data-tabs>
+  <div class="figtabs">
+    {%- for f in figs %}
+    <input class="tabradio" type="radio" name="tabs-{{ p.id }}" id="tab-{{ p.id }}-{{ loop.index0 }}"{% if loop.first %} checked{% endif %}>
+    {%- endfor %}
     <div class="tablist">
       {%- for f in figs %}
-      <button class="tab{% if loop.first %} active{% endif %}" data-target="fig-{{ p.id }}-{{ loop.index0 }}">{{ f.method }}</button>
+      <label for="tab-{{ p.id }}-{{ loop.index0 }}">{{ f.method }}</label>
       {%- endfor %}
     </div>
-    {%- for f in figs %}
-    <div class="figpanel{% if loop.first %} active{% endif %}" id="fig-{{ p.id }}-{{ loop.index0 }}">
-      <div class="method-tag">{{ f.method }}</div>
-      {{ f.content | safe }}
+    <div class="panels">
+      {%- for f in figs %}
+      <div class="figpanel">
+        <div class="method-tag">{{ f.method }}</div>
+        {{ f.content | safe }}
+      </div>
+      {%- endfor %}
     </div>
-    {%- endfor %}
   </div>
   {%- else %}
   <p class="dp-empty">利用可能なレンダラで描画できませんでした。</p>
@@ -168,18 +186,5 @@ footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border
   {%- if skipped %} / 描画不可: {{ skipped|join(", ") }}{% endif %}
 </footer>
 </main>
-<script>
-document.querySelectorAll('[data-tabs]').forEach(function (box) {
-  box.querySelectorAll('.tab').forEach(function (tab) {
-    tab.addEventListener('click', function () {
-      box.querySelectorAll('.tab').forEach(function (t) { t.classList.remove('active'); });
-      box.querySelectorAll('.figpanel').forEach(function (p) { p.classList.remove('active'); });
-      tab.classList.add('active');
-      var panel = box.querySelector('#' + CSS.escape(tab.dataset.target));
-      if (panel) panel.classList.add('active');
-    });
-  });
-});
-</script>
 </body>
 </html>

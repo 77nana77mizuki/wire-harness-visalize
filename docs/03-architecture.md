@@ -66,7 +66,7 @@ class Renderer(ABC):
 ```
 
 - 入力: `datapatterns.json`（読み込み済み `DataPatternModel`）+ レンダオプション
-- 出力: `renders/<method>/<pattern-id>.svg` と `renders/<method>/index.json`
+- 出力: `renders/<method>/<pattern-id>.svg` と `renders/index.json`（1 パターンに複数レコード）
   （`pattern-id → {asset_path, title, caption, width, height, method, warnings[]}`）
 
 ### B-2. 登録
@@ -118,7 +118,7 @@ datapattern render datapatterns.json --out out/ --method graphviz
 ### B-4. 新方式を足す手順（例: schemdraw）
 
 1. `src/datapattern/render/schemdraw_renderer.py` を追加（`Renderer` を実装）
-2. `renderers/registry.yaml` に 1 エントリ追加
+2. `renderers/registry.toml` に 1 エントリ追加
 3. `skills/datapattern-render-schemdraw/SKILL.md` を追加
 4. `tests/test_schemdraw_renderer.py` にゴールデンテスト
 
@@ -239,8 +239,8 @@ datapattern render datapatterns.json --out out/ --method graphviz
 - **表形式**: 分類サマリ表 → パターン一覧表（ID / 分類 / タイトル / 概要 / 描画方式、ID は詳細へアンカー）
   → 各パターンの詳細表（ID / 概要 / なぜ必要か / option 式 / testHints / 根拠を行見出しで）
 - **実現方式タブ**: 図は方式ごとのタブ（`--method all`）。`html` の表、`graphviz`/`wireviz`/`mermaid` の SVG を
-  同じ場所で切り替えて比較できる。切替は最小の inline JS、印刷時は全パネル展開
-- **単一ファイルで完結**（SVG は inline、外部依存は tab 切替の JS のみ）
+  同じ場所で切り替えて比較できる。切替は純 CSS（radio + :checked、JS 不使用）、印刷時は全パネル展開
+- **単一ファイルで完結**（SVG は inline、JS ゼロ）
 - ライト / ダーク両対応（外部レンダラの SVG は白地に載せる）、印刷可
 
 ---

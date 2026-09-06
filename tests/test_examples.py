@@ -40,7 +40,8 @@ def test_all_methods_report_has_tabs(tmp_path):
     model, manifest, report = build_report(EXAMPLE, "all", tmp_path)
     html = report.read_text("utf-8")
     assert 'class="figtabs"' in html
-    assert html.count('<button class="tab') >= len(model.patterns)
+    assert html.count('class="figtabs"') == len(model.patterns)
+    assert html.count('<input class="tabradio"') == len(manifest.assets)
     if shutil.which("dot"):
         circuit_ids = [p.id for p in model.patterns if p.type == "circuit"]
         multi = [c for c in circuit_ids if len({a.method for a in manifest.assets_for(c)}) > 1]
