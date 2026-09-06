@@ -147,7 +147,7 @@ datapattern render datapatterns.json --out out/ --method graphviz
 | `capital-datapattern-report` | オーケストレータ | パイプライン全体を実行し、パターン種別に応じてレンダラを選択、最終 `report.html` を提示 |
 | `capital-addon-analysis` | 解析 | Java アドオンの静的 + 意味解析手順、`DataPatternModel` の埋め方、Capital オブジェクト / プロパティ辞書（実物から漸進的に育てる） |
 | `datapattern-render-html` | レンダラ | Jinja2 の表（既定・ゼロ依存） |
-| `datapattern-render-svg` | レンダラ | ゼロ依存の配線図 SVG（アース/スプライス/マルチコア束/シールド記号。共有シーン `render/_schematic.py`） |
+| `datapattern-render-svg` | レンダラ | ゼロ依存の配線図 SVG。ランク付き列配置＋直交配線＋IEC 記号（アース/ヒューズ/スプライス◇/多芯束/シールド囲い）＋シート枠。共有シーン `render/_schematic.py` |
 | `datapattern-render-graphviz` | レンダラ | 抽象接続グラフ・決定木（`dot`） |
 | `datapattern-render-wireviz` | レンダラ | ハーネス図（`wireviz` CLI、GPLv3・非 import） |
 | `datapattern-render-mermaid` | レンダラ | Mermaid（`mmdc`） |
@@ -237,8 +237,9 @@ datapattern render datapatterns.json --out out/ --method graphviz
 
 ### F-3. 共通（現行の実装）
 
-- **表形式**: 分類サマリ表 → パターン一覧表（ID / 分類 / タイトル / 概要 / 描画方式、ID は詳細へアンカー）
-  → 各パターンの詳細表（ID / 概要 / なぜ必要か / option 式 / testHints / 根拠を行見出しで）
+- **表形式**: 分類サマリ表 → パターン一覧表 → 各パターンの詳細表（ID / 概要 / なぜ必要か /
+  **対象オブジェクト** / **接続** / 構成 / **プロパティ期待値** / option 式 / testHints / 根拠 を行見出しで）。
+  プロパティ値は図に描かず必ずこの表に載せる（図はレイアウトと記号に専念）
 - **実現方式タブ**: 図は方式ごとのタブ（`--method all`）。`html` の表、`graphviz`/`wireviz`/`mermaid` の SVG を
   同じ場所で切り替えて比較できる。切替は純 CSS（radio + :checked、JS 不使用）、印刷時は全パネル展開
 - **単一ファイルで完結**（SVG は inline、JS ゼロ）

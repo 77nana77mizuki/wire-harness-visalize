@@ -157,7 +157,7 @@ footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border
     <tbody>
       <tr><th>ID</th><td><code>circuit-switched-ground</code></td></tr>
       <tr><th>概要</th><td>device 2 個をスプライス経由で接地する最小構成。</td></tr>
-      <tr><th>なぜ必要か</th><td>アドオンがスプライス経由の経路をたどれるか確認するため。</td></tr>    </tbody>
+      <tr><th>なぜ必要か</th><td>アドオンがスプライス経由の経路をたどれるか確認するため。</td></tr>      <tr><th>対象オブジェクト</th><td><ul class="tight">        <li>device <code>D1</code> — partNumber=DEV-001</li>        <li>connector <code>X1</code> — cavities=2, partNumber=CON-040</li>        <li>splice <code>S1</code></li>      </ul></td></tr>      <tr><th>接続</th><td><ul class="tight">        <li><code>D1.GND</code> → <code>S1</code> — 0.5 BK</li>        <li><code>S1</code> → <code>X1.1</code> — 0.5 BK</li>      </ul></td></tr>    </tbody>
   </table>  <div class="figtabs">    <input class="tabradio" type="radio" name="tabs-circuit-switched-ground" id="tab-circuit-switched-ground-0" checked>    <div class="tablist">      <label for="tab-circuit-switched-ground-0">html</label>    </div>
     <div class="panels">      <div class="figpanel">
         <div class="method-tag">html</div>
@@ -197,7 +197,7 @@ footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border
     <tbody>
       <tr><th>ID</th><td><code>opt-cfg-all-false</code></td></tr>
       <tr><th>概要</th><td>option 式 OPT_GND が false のとき、DRC の対象コネクタが 0 件になる境界。</td></tr>
-      <tr><th>なぜ必要か</th><td>アドオンが空コレクションで NPE を起こさないか確認するため。</td></tr>      <tr><th>option 式</th><td><code>OPT_GND</code></td></tr>      <tr><th>テストのヒント</th><td><ul class="tight"><li>OPT_GND=0 で DRC を実行し、警告 0 件・例外なしを確認</li>      </ul></td></tr>      <tr><th>根拠</th><td><code>src/main/java/com/example/GroundCircuitDrc.java#L44-L52</code>      </td></tr>    </tbody>
+      <tr><th>なぜ必要か</th><td>アドオンが空コレクションで NPE を起こさないか確認するため。</td></tr>      <tr><th>option 式</th><td><code>OPT_GND</code></td></tr>      <tr><th>構成 → 残るオブジェクト</th><td><ul class="tight">        <li><code>OPT_GND=0</code> → （空）</li>        <li><code>OPT_GND=1</code> → X1, W1</li>      </ul></td></tr>      <tr><th>テストのヒント</th><td><ul class="tight"><li>OPT_GND=0 で DRC を実行し、警告 0 件・例外なしを確認</li>      </ul></td></tr>      <tr><th>根拠</th><td><code>src/main/java/com/example/GroundCircuitDrc.java#L44-L52</code>      </td></tr>    </tbody>
   </table>  <div class="figtabs">    <input class="tabradio" type="radio" name="tabs-opt-cfg-all-false" id="tab-opt-cfg-all-false-0" checked>    <div class="tablist">      <label for="tab-opt-cfg-all-false-0">html</label>    </div>
     <div class="panels">      <div class="figpanel">
         <div class="method-tag">html</div>
@@ -218,7 +218,9 @@ footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border
     <tbody>
       <tr><th>ID</th><td><code>prop-wire-csa-lower-bound</code></td></tr>
       <tr><th>概要</th><td>wire の断面積を仕様下限 0.35mm2 に設定したケース。</td></tr>
-      <tr><th>なぜ必要か</th><td>アドオンの CSA 下限チェックが境界値でどう判定するか確認するため。</td></tr>      <tr><th>テストのヒント</th><td><ul class="tight"><li>0.35 は合格、0.34 は違反になることを確認</li>      </ul></td></tr>    </tbody>
+      <tr><th>なぜ必要か</th><td>アドオンの CSA 下限チェックが境界値でどう判定するか確認するため。</td></tr>      <tr><th>対象オブジェクト</th><td><ul class="tight">        <li>wire <code>W1</code> — csa=0.35</li>      </ul></td></tr>      <tr><th>プロパティ期待値</th><td><ul class="tight">        <li><code>W1.csa</code> =
+          0.35 — 下限ちょうど。合格side の境界</li>        <li><code>W1.csa</code> =
+          0.34 — 下限未満。違反side の境界</li>      </ul></td></tr>      <tr><th>テストのヒント</th><td><ul class="tight"><li>0.35 は合格、0.34 は違反になることを確認</li>      </ul></td></tr>    </tbody>
   </table>  <div class="figtabs">    <input class="tabradio" type="radio" name="tabs-prop-wire-csa-lower-bound" id="tab-prop-wire-csa-lower-bound-0" checked>    <div class="tablist">      <label for="tab-prop-wire-csa-lower-bound-0">html</label>    </div>
     <div class="panels">      <div class="figpanel">
         <div class="method-tag">html</div>

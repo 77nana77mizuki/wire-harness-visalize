@@ -1,8 +1,8 @@
-"""``drawio`` レンダラ — 編集可能な .drawio（mxGraph XML）を手書き生成する（ゼロ依存）。
+"""``drawio`` レンダラ — 編集可能な .drawio（mxGraph XML）を手書き生成（ゼロ依存）。
 
-drawpyo は GPLv3 なので使わず XML を直接組む。共有シーン（``_schematic.py``）を使い、
-Capital Logic 風の記号（アース記号 ⏚ / スプライスのドット / コネクタ / マルチコア太線 /
-シールド破線）に寄せる。circuit / option_config。出力は「画像」でなく編集可能ファイル。
+共有シーン（``_schematic.py``）の配置をそのまま使い、draw.io にエッジ経路は任せる。
+記号は Capital 風（アース ⏚ / スプライスのドット / 多芯太線 / シールド破線）。
+出力は「画像」でなく編集可能ファイル。circuit / option_config。
 """
 
 from __future__ import annotations
@@ -16,25 +16,14 @@ from datapattern.render._schematic import SLink, SNode, build_scene
 from datapattern.render.base import Asset, RenderContext, Renderer
 
 _STYLE = {
-    "connector": "rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#333333;",
+    "connector": "rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#333333;",
     "device": "rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;",
     "fuse": "rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;",
     "supply": "ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;",
     "splice": "ellipse;whiteSpace=wrap;html=1;fillColor=#000000;strokeColor=#000000;",
-    "ground": (
-        "text;html=1;align=center;verticalAlign=top;fontSize=26;spacing=0;"
-        "strokeColor=none;fillColor=none;"
-    ),
+    "ground": "text;html=1;align=center;verticalAlign=middle;fontSize=22;strokeColor=none;fillColor=none;",
 }
-_SIZE = {
-    "connector": (150, 60),
-    "device": (150, 60),
-    "fuse": (120, 50),
-    "supply": (54, 54),
-    "splice": (16, 16),
-    "ground": (40, 46),
-}
-_LINK_STYLE = {
+_LINK = {
     "wire": "endArrow=none;html=1;strokeColor=#555555;",
     "multicore": "endArrow=none;html=1;strokeWidth=3;strokeColor=#333333;",
     "shield": "endArrow=none;html=1;dashed=1;strokeColor=#777777;",
@@ -42,11 +31,11 @@ _LINK_STYLE = {
 }
 
 
-def _vertex(cid: str, label: str, x: float, y: float, w: int, h: int, style: str) -> str:
+def _vertex(cid: str, label: str, x: float, y: float, w: float, h: float, style: str) -> str:
     return (
         f"<mxCell id={quoteattr(cid)} value={quoteattr(label)} style={quoteattr(style)} "
         'vertex="1" parent="1">'
-        f'<mxGeometry x="{x:.0f}" y="{y:.0f}" width="{w}" height="{h}" as="geometry"/></mxCell>'
+        f'<mxGeometry x="{x:.0f}" y="{y:.0f}" width="{w:.0f}" height="{h:.0f}" as="geometry"/></mxCell>'
     )
 
 
@@ -71,24 +60,20 @@ def _wrap(cells: list[str]) -> str:
 
 
 def _node_cell(n: SNode) -> str:
-    w, h = _SIZE[n.symbol]
-    label = "⏚" if n.symbol == "ground" else n.id
-    x, y = n.x, n.y
-    if n.symbol == "splice":
-        x, y = n.x - w / 2, n.y - h / 2
-    if n.symbol == "ground":
-        label = f"⏚&#10;{n.id}"
-    return _vertex(f"n_{n.id}", label, x, y, w, h, _STYLE[n.symbol])
+    label = f"⏚&#10;{n.id}" if n.symbol == "ground" else n.id
+    return _vertex(
+        f"n_{n.id}", label, n.x, n.y, n.w, n.h, _STYLE.get(n.symbol, _STYLE["connector"])
+    )
 
 
 def _link_cell(idx: int, lk: SLink) -> str:
-    style = _LINK_STYLE.get(lk.kind, _LINK_STYLE["wire"])
+    style = _LINK.get(lk.kind, _LINK["wire"])
     if lk.kind == "multicore":
-        label = lk.label
+        label = f"{lk.conductors}C"
     elif lk.colors:
         label = f"{lk.gauge or ''} {lk.colors[0]}".strip()
     else:
-        label = lk.gauge or lk.label
+        label = lk.gauge or ""
     return _edge(f"e_{idx}", f"n_{lk.a}", f"n_{lk.b}", label, style)
 
 
@@ -105,7 +90,7 @@ def _option_config_xml(pattern: Pattern) -> str:
     for i, r in enumerate(pattern.variant_matrix):
         resolved = ", ".join(r.resolves_to) if r.resolves_to else "（空）"
         cells.append(_vertex(f"v{i}", resolved, 380, 40 + i * 80, 260, 50, _STYLE["connector"]))
-        cells.append(_edge(f"e{i}", "root", f"v{i}", r.expr, _LINK_STYLE["wire"]))
+        cells.append(_edge(f"e{i}", "root", f"v{i}", r.expr, _LINK["wire"]))
     return _wrap(cells)
 
 

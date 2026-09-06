@@ -154,6 +154,39 @@ footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border
       {%- if p.option_expression %}
       <tr><th>option 式</th><td><code>{{ p.option_expression }}</code></td></tr>
       {%- endif %}
+      {%- if p.capital_objects %}
+      <tr><th>対象オブジェクト</th><td><ul class="tight">
+        {%- for o in p.capital_objects %}
+        <li>{{ o.kind }}{% if o.ref %} <code>{{ o.ref }}</code>{% endif %}
+          {%- if o.properties %} — {% for k, v in o.properties.items() | sort %}{{ k }}={{ v }}{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}</li>
+        {%- endfor %}
+      </ul></td></tr>
+      {%- endif %}
+      {%- if p.connectivity %}
+      <tr><th>接続</th><td><ul class="tight">
+        {%- for e in p.connectivity.edges %}
+        <li><code>{{ e.source }}</code> → <code>{{ e.target }}</code>
+          {%- if e.via %} <span class="pin">via {{ e.via }}</span>{% endif %}
+          {%- if e.gauge or e.color %} — {{ e.gauge or "" }} {{ e.color or "" }}{% endif %}
+          {%- if e.shield %} <span class="pin">shield</span>{% endif %}</li>
+        {%- endfor %}
+      </ul></td></tr>
+      {%- endif %}
+      {%- if p.variant_matrix %}
+      <tr><th>構成 → 残るオブジェクト</th><td><ul class="tight">
+        {%- for r in p.variant_matrix %}
+        <li><code>{{ r.expr }}</code> → {{ r.resolves_to | join(", ") if r.resolves_to else "（空）" }}</li>
+        {%- endfor %}
+      </ul></td></tr>
+      {%- endif %}
+      {%- if p.property_expectations %}
+      <tr><th>プロパティ期待値</th><td><ul class="tight">
+        {%- for pe in p.property_expectations %}
+        <li><code>{{ pe.object }}.{{ pe.property }}</code> =
+          {{ pe.value if pe.value is not none else "未設定" }} — {{ pe.why }}</li>
+        {%- endfor %}
+      </ul></td></tr>
+      {%- endif %}
       {%- if p.test_hints %}
       <tr><th>テストのヒント</th><td><ul class="tight">
         {%- for h in p.test_hints %}<li>{{ h }}</li>{% endfor %}

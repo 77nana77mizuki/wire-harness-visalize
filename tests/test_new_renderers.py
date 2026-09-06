@@ -40,7 +40,8 @@ def test_svg_circuit_deterministic(tmp_path):
     b = (d2 / r.render(_pat("multicore-three-core"), ctx2).path).read_bytes()
     assert a == b
     assert a.startswith(b"<svg")
-    assert b"MC1" in a
+    assert b">M1<" in a and b">M2<" in a
+    assert b"multicore-three-core" in a  # 図枠のタイトルブロック
 
 
 def test_svg_option_config(tmp_path):

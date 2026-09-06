@@ -40,3 +40,9 @@ select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 # 日本語の全角括弧などを「紛らわしい Unicode」と警告する規則は、
 # 本プロジェクトは説明文を日本語で書くため無効化する。
 ignore = ["RUF001", "RUF002", "RUF003"]
+
+[tool.ruff.lint.per-file-ignores]
+# SVG / mxGraph XML を組み立てるモジュールは長い f-string リテラルが多い。
+"src/datapattern/render/svg_renderer.py" = ["E501"]
+"src/datapattern/render/drawio_renderer.py" = ["E501"]
+"src/datapattern/render/_schematic.py" = ["E501"]
