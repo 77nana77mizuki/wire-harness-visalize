@@ -282,8 +282,8 @@ docs/                                # 本ドキュメント群
 | 1 | スキャフォールド | `pyproject.toml` + `model.py` + JSON Schema + `cli.py` 骨組み、`pytest` が緑 | ✅ 完了（uv + Python 3.12、29 tests green、`datapattern validate`/`schema` 実働） |
 | 2 | 縦串（最小 e2e） | 手書き `datapatterns.json` → `datapattern-render-html` → `report.py` → `report.html`、ゴールデンテスト | ✅ 完了（`html_renderer` + `render/pipeline.py` + `report.py` + Jinja2 テンプレート、`datapattern render`/`report` 実働、42 tests green、ゴールデン `tests/fixtures/expected/report_full.html`） |
 | 3 | 解析 | `static_scan.py` + `ingest.py` + `combos.py` + `capital-addon-analysis` skill | ✅ 完了（`ingest.py`＝manifest、`static_scan.py`＝regex スキャン→`evidence.json`（`evidence.schema.json` 準拠）、`combos.py`＝境界＋ペアワイズ＋排他違反。`datapattern ingest`/`scan`/`combos` 実働。tree-sitter-java は将来の高精度化オプション） |
-| 4 | オーケストレータ | `capital-datapattern-report` skill ＋ `datapattern run` で全パイプライン結線 | 次 |
-| 5 | レンダラ拡充 | `wireviz`（CLI 起動）+ `graphviz` + `registry.yaml`。`wireviz` 未導入環境で `html` にフォールバックすること | 未 |
+| 4 | オーケストレータ | `capital-datapattern-report` skill ＋ `datapattern run` で全パイプライン結線 | ✅ 完了（`orchestrate.py`＝`prepare_workspace`（ingest+scan+テンプレ）/`build_report`（validate+render+report）、`datapattern run --addon/--patterns`、`capital-datapattern-report` skill） |
+| 5 | レンダラ拡充 | `wireviz`（CLI 起動）+ `graphviz` + `registry.yaml`。`wireviz` 未導入環境で `html` にフォールバックすること | 次 |
 | 6 | 早期フォロー | `mermaid` / `schemdraw` / `drawio` を **skill 追加のみ**で導入（疎結合の実証） | 未 |
 
 ---

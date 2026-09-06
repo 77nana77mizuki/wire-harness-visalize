@@ -37,13 +37,6 @@ def test_schema_path_only(capsys):
     assert capsys.readouterr().out.strip().endswith("datapattern.schema.json")
 
 
-@pytest.mark.parametrize("cmd", ["run"])
-def test_stub_commands(capsys, cmd):
-    rc = main([cmd])
-    assert rc == 3
-    assert "未実装" in capsys.readouterr().err
-
-
 def test_ingest_cmd(capsys, tmp_path, fixtures_dir):
     rc = main(["ingest", str(fixtures_dir / "sample_addon"), "--out", str(tmp_path)])
     assert rc == 0

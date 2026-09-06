@@ -1,7 +1,6 @@
 """``datapattern`` コマンドライン。
 
-実働: ``ingest`` / ``scan`` / ``combos`` / ``validate`` / ``schema`` / ``render`` / ``report``。
-骨組み: ``run``（ロードマップ ``docs/03-architecture.md`` §H）。
+``ingest`` / ``scan`` / ``combos`` / ``validate`` / ``schema`` / ``render`` / ``report`` / ``run``。
 """
 
 from __future__ import annotations
@@ -15,10 +14,6 @@ from pathlib import Path
 from datapattern import __version__
 from datapattern.model import SchemaValidationError, load_model, load_schema
 from datapattern.render.base import Renderer
-
-_NOT_IMPLEMENTED_PHASE = {
-    "run": "第4弾",
-}
 
 
 class CliError(Exception):
@@ -146,14 +141,36 @@ def _cmd_combos(args: argparse.Namespace) -> int:
     return 0
 
 
-def _cmd_stub(args: argparse.Namespace) -> int:
-    phase = _NOT_IMPLEMENTED_PHASE.get(args.command, "未定")
+def _cmd_run(args: argparse.Namespace) -> int:
+    from datapattern.orchestrate import build_report, prepare_workspace
+
+    if not args.addon and not args.patterns:
+        raise CliError("--addon か --patterns の少なくとも一方を指定してください", code=2)
+
+    if args.addon:
+        try:
+            ws = prepare_workspace(args.addon, args.out)
+        except (OSError, NotADirectoryError) as exc:
+            raise CliError(f"cannot read source dir {args.addon}: {exc}", code=2) from None
+        print(
+            f"prepare: {len(ws.manifest.files)} files / "
+            f"pluginType={ws.evidence['pluginTypeGuess']}\n"
+            f"  {ws.manifest_path}\n  {ws.evidence_path}\n  {ws.template_path}"
+        )
+        if not args.patterns:
+            print(
+                "\n次: `capital-addon-analysis` skill で "
+                "evidence.json → datapatterns.json を作り、\n"
+                "    `datapattern run --patterns <それ> --out out/` を実行してください。"
+            )
+            return 0
+
+    model, manifest, report_path = build_report(args.patterns, _renderer(args.method), args.out)
     print(
-        f"`datapattern {args.command}` は未実装です（{phase}で実装予定）。"
-        " 進捗は docs/03-architecture.md §H を参照。",
-        file=sys.stderr,
+        f"report: {report_path}（patterns={len(model.patterns)}, "
+        f"図={len(manifest.assets)}, skip={len(manifest.skipped)}）"
     )
-    return 3
+    return 0
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -209,9 +226,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_combos.set_defaults(func=_cmd_combos)
 
-    for name in ("run",):
-        p = sub.add_parser(name, help=f"[未実装] {name}")
-        p.set_defaults(func=_cmd_stub)
+    p_run = sub.add_parser(
+        "run", help="パイプライン結線: --addon で ingest+scan、--patterns で render+report"
+    )
+    p_run.add_argument("--addon", type=Path, help="アドオンのソースディレクトリ")
+    p_run.add_argument("--patterns", type=Path, help="datapatterns.json")
+    p_run.add_argument("--out", type=Path, default=Path("out"), help="出力先（既定: out/）")
+    p_run.add_argument("--method", default="html", help="レンダラ名（既定: html）")
+    p_run.set_defaults(func=_cmd_run)
 
     return parser
 
