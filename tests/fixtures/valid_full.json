@@ -1,0 +1,66 @@
+{
+  "schemaVersion": "1.0",
+  "addon": {
+    "name": "GroundCircuitDrc",
+    "pluginType": "check",
+    "capitalVersion": "2207",
+    "sourceRefs": ["src/main/java/com/example/GroundCircuitDrc.java#L20-L88"]
+  },
+  "generatedFrom": {
+    "evidenceHash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "generator": "capital-addon-analysis@0.1.0"
+  },
+  "patterns": [
+    {
+      "id": "opt-cfg-all-false",
+      "type": "option_config",
+      "title": "全 option が false のとき対象が空になる",
+      "summary": "option 式 OPT_GND が false のとき、DRC の対象コネクタが 0 件になる境界。",
+      "rationale": "アドオンが空コレクションで NPE を起こさないか確認するため。",
+      "optionExpression": "OPT_GND",
+      "variantMatrix": [
+        { "expr": "OPT_GND=0", "resolvesTo": [] },
+        { "expr": "OPT_GND=1", "resolvesTo": ["X1", "W1"] }
+      ],
+      "testHints": ["OPT_GND=0 で DRC を実行し、警告 0 件・例外なしを確認"],
+      "renderHints": { "preferredMethods": ["html", "graphviz"] }
+    },
+    {
+      "id": "circuit-switched-ground",
+      "type": "circuit",
+      "title": "スイッチドグラウンド最小回路",
+      "summary": "device 2 個をスプライス経由で接地する最小構成。",
+      "rationale": "アドオンがスプライス経由の経路をたどれるか確認するため。",
+      "capitalObjects": [
+        { "kind": "device", "ref": "D1", "properties": { "partNumber": "DEV-001" } },
+        { "kind": "connector", "ref": "X1", "properties": { "partNumber": "CON-040", "cavities": 2 } },
+        { "kind": "splice", "ref": "S1" }
+      ],
+      "connectivity": {
+        "nodes": [
+          { "id": "D1", "kind": "device", "pincount": 2, "pinlabels": ["VCC", "GND"] },
+          { "id": "X1", "kind": "connector", "pincount": 2 },
+          { "id": "S1", "kind": "splice" }
+        ],
+        "edges": [
+          { "from": "D1.GND", "to": "S1", "gauge": "0.5", "color": "BK" },
+          { "from": "S1", "to": "X1.1", "gauge": "0.5", "color": "BK" }
+        ]
+      },
+      "renderHints": { "preferredMethods": ["wireviz", "graphviz"] }
+    },
+    {
+      "id": "prop-wire-csa-lower-bound",
+      "type": "property_set",
+      "title": "電線 CSA の下限境界",
+      "summary": "wire の断面積を仕様下限 0.35mm2 に設定したケース。",
+      "rationale": "アドオンの CSA 下限チェックが境界値でどう判定するか確認するため。",
+      "capitalObjects": [{ "kind": "wire", "ref": "W1", "properties": { "csa": 0.35 } }],
+      "propertyExpectations": [
+        { "object": "W1", "property": "csa", "value": 0.35, "why": "下限ちょうど。合格side の境界" },
+        { "object": "W1", "property": "csa", "value": 0.34, "why": "下限未満。違反side の境界" }
+      ],
+      "testHints": ["0.35 は合格、0.34 は違反になることを確認"]
+    }
+  ]
+}

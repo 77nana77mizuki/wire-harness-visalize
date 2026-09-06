@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+dist/
+build/
+
+# uv
+# (uv.lock is committed on purpose)
+
+# Test / tooling
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Pipeline working output
+/workspace/
+/renders/
+/out/
+*.local
+
+# OS / editor
+.DS_Store

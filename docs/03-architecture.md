@@ -275,16 +275,16 @@ docs/                                # 本ドキュメント群
 
 ---
 
-## H. 実装ロードマップ（第2弾以降）
+## H. 実装ロードマップ
 
-| # | 内容 | 完了条件 |
-|---|------|----------|
-| 1 | スキャフォールド | `pyproject.toml` + `model.py` + JSON Schema + `cli.py` 骨組み、`pytest` が緑 |
-| 2 | 縦串（最小 e2e） | 手書き `datapatterns.json` → `datapattern-render-html` → `report.py` → `report.html`、ゴールデンテスト |
-| 3 | 解析 | `static_scan.py`（tree-sitter-java）+ `ingest.py` + `combos.py` + `capital-addon-analysis` skill |
-| 4 | オーケストレータ | `capital-datapattern-report` skill で全パイプライン結線 |
-| 5 | レンダラ拡充 | `wireviz`（CLI 起動）+ `graphviz` + `registry.yaml`。`wireviz` 未導入環境で `html` にフォールバックすること |
-| 6 | 早期フォロー | `mermaid` / `schemdraw` / `drawio` を **skill 追加のみ**で導入（疎結合の実証） |
+| # | 内容 | 完了条件 | 状態 |
+|---|------|----------|------|
+| 1 | スキャフォールド | `pyproject.toml` + `model.py` + JSON Schema + `cli.py` 骨組み、`pytest` が緑 | ✅ 完了（uv + Python 3.12、29 tests green、`datapattern validate`/`schema` 実働） |
+| 2 | 縦串（最小 e2e） | 手書き `datapatterns.json` → `datapattern-render-html` → `report.py` → `report.html`、ゴールデンテスト | 次 |
+| 3 | 解析 | `static_scan.py`（tree-sitter-java）+ `ingest.py` + `combos.py` + `capital-addon-analysis` skill | 未 |
+| 4 | オーケストレータ | `capital-datapattern-report` skill で全パイプライン結線 | 未 |
+| 5 | レンダラ拡充 | `wireviz`（CLI 起動）+ `graphviz` + `registry.yaml`。`wireviz` 未導入環境で `html` にフォールバックすること | 未 |
+| 6 | 早期フォロー | `mermaid` / `schemdraw` / `drawio` を **skill 追加のみ**で導入（疎結合の実証） | 未 |
 
 ---
 
@@ -296,7 +296,7 @@ docs/                                # 本ドキュメント群
 | custom check / action / report の実装契約 | 同上 |
 | option expression / configuration の API 読み出し方法 | 同上 |
 | ダミー `examples/sample-addon` を作るか | 第2弾で判断（現時点は不要） |
-| 実装言語の細部（uv か Poetry か、Python 最低バージョン） | 第2弾スキャフォールド時 |
+| ~~実装言語の細部（uv か Poetry か、Python 最低バージョン）~~ | ✅ 確定: **uv + Python 3.12**、ビルドは hatchling、lint/format は ruff |
 
 ---
 

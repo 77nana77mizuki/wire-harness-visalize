@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "1.0",
+  "addon": { "name": "Broken" },
+  "patterns": [
+    {
+      "id": "no-type",
+      "title": "type がない",
+      "summary": "型欠落",
+      "rationale": "検証が失敗するべき"
+    }
+  ]
+}

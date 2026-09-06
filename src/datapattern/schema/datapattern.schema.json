@@ -1,0 +1,271 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fujitsu.example/wire-harness-visalize/datapattern.schema.json",
+  "title": "DataPatternModel",
+  "description": "Capital Logic アドオンをテストするために洗い出したデータパターンの集合。解析・描画・レポート組立を疎結合につなぐ唯一の契約。",
+  "type": "object",
+  "required": ["schemaVersion", "addon", "patterns"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "description": "このモデルが従うスキーマのバージョン（MAJOR.MINOR）。",
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+$"
+    },
+    "addon": {
+      "description": "テスト対象の Capital Logic アドオン。",
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "pluginType": {
+          "description": "Capital 拡張点の種別。",
+          "type": "string",
+          "enum": ["check", "action", "report", "ui", "unknown"]
+        },
+        "capitalVersion": {
+          "description": "対象 Capital のリリース番号（分かれば。例: 2207）。",
+          "type": "string"
+        },
+        "sourceRefs": {
+          "description": "根拠となるソース位置。'path' もしくは 'path#Lstart-Lend' 形式。",
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "generatedFrom": {
+      "description": "このモデルの生成元。再現性の追跡用。",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "evidenceHash": {
+          "description": "static_scan が出力した evidence.json の内容ハッシュ（例: 'sha256:...'）。",
+          "type": "string"
+        },
+        "generator": {
+          "description": "生成した skill / ツール名とバージョン。",
+          "type": "string"
+        }
+      }
+    },
+    "patterns": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/pattern" }
+    }
+  },
+  "$defs": {
+    "propertyScalar": {
+      "type": ["string", "number", "boolean", "null"]
+    },
+    "capitalObject": {
+      "description": "パターンに登場する Capital オブジェクトと、それに設定するプロパティ。",
+      "type": "object",
+      "required": ["kind"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "description": "Capital のオブジェクト種別。",
+          "type": "string",
+          "examples": [
+            "device", "connector", "pin", "cavity", "signal", "wire", "conductor",
+            "splice", "multicore", "shield", "overbraid", "highway", "library_part", "diagram"
+          ]
+        },
+        "ref": {
+          "description": "パターン内でこのオブジェクトを参照するための識別子（例: 'X1', 'W3'）。connectivity のノード id と対応させる。",
+          "type": "string"
+        },
+        "properties": {
+          "description": "プロパティ名 → 値。",
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/propertyScalar" }
+        }
+      }
+    },
+    "variantRow": {
+      "type": "object",
+      "required": ["expr", "resolvesTo"],
+      "additionalProperties": false,
+      "properties": {
+        "expr": {
+          "description": "option 値の割り当て（例: 'OPT_A=1,OPT_B=0'）または option expression。",
+          "type": "string",
+          "minLength": 1
+        },
+        "resolvesTo": {
+          "description": "この構成で 100% 設計に残るオブジェクトの参照。",
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "connectivity": {
+      "description": "分類 circuit 用の接続トポロジ。WireViz の YAML データモデルに写像しやすい形にする。",
+      "type": "object",
+      "required": ["nodes", "edges"],
+      "additionalProperties": false,
+      "properties": {
+        "nodes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "kind"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "kind": {
+                "type": "string",
+                "enum": ["device", "connector", "splice", "terminal", "component"]
+              },
+              "pincount": { "type": "integer", "minimum": 1 },
+              "pinlabels": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        },
+        "edges": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["from", "to"],
+            "additionalProperties": false,
+            "properties": {
+              "from": {
+                "description": "'nodeId' もしくは 'nodeId.pin' 形式。",
+                "type": "string",
+                "minLength": 1
+              },
+              "to": { "type": "string", "minLength": 1 },
+              "via": {
+                "description": "経由する splice / multicore などのノード id。",
+                "type": "string"
+              },
+              "gauge": {
+                "description": "電線の断面積。mm2 または AWG（例: '0.5', 'AWG20'）。",
+                "type": "string"
+              },
+              "color": {
+                "description": "IEC 60757 略号（例: 'BK', 'GNYE'）または hex。",
+                "type": "string"
+              },
+              "shield": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    },
+    "propertyExpectation": {
+      "type": "object",
+      "required": ["object", "property", "why"],
+      "additionalProperties": false,
+      "properties": {
+        "object": {
+          "description": "対象オブジェクト（capitalObjects[].ref、または自由記述）。",
+          "type": "string",
+          "minLength": 1
+        },
+        "property": { "type": "string", "minLength": 1 },
+        "value": {
+          "description": "期待値。範囲や '未設定' などの記述でもよい。",
+          "$ref": "#/$defs/propertyScalar"
+        },
+        "why": {
+          "description": "このプロパティ設定がテストで重要な理由（同値クラス / 境界の説明）。",
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "pattern": {
+      "type": "object",
+      "required": ["id", "type", "title", "summary", "rationale"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "パターンの一意 id。ケバブケース。図アセットのファイル名にも使う。",
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]*$"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["option_config", "circuit", "property_set"]
+        },
+        "title": { "type": "string", "minLength": 1 },
+        "summary": { "type": "string", "minLength": 1 },
+        "rationale": {
+          "description": "なぜこのパターンがこのアドオンのテストに必要か。",
+          "type": "string",
+          "minLength": 1
+        },
+        "capitalObjects": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/capitalObject" }
+        },
+        "optionExpression": {
+          "description": "分類 option_config。対象の option expression。",
+          "type": "string"
+        },
+        "variantMatrix": {
+          "description": "分類 option_config。option 値の組と、その解決結果。",
+          "type": "array",
+          "items": { "$ref": "#/$defs/variantRow" }
+        },
+        "connectivity": { "$ref": "#/$defs/connectivity" },
+        "propertyExpectations": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/propertyExpectation" }
+        },
+        "testHints": {
+          "description": "テストデータ作成時の具体的な注意（境界・異常系など）。",
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "renderHints": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "preferredMethods": {
+              "description": "この順で試すレンダラ名（例: ['wireviz', 'graphviz', 'html']）。",
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": ["type"],
+            "properties": { "type": { "const": "option_config" } }
+          },
+          "then": {
+            "anyOf": [
+              { "required": ["optionExpression"] },
+              { "required": ["variantMatrix"] }
+            ]
+          }
+        },
+        {
+          "if": {
+            "required": ["type"],
+            "properties": { "type": { "const": "circuit" } }
+          },
+          "then": { "required": ["connectivity"] }
+        },
+        {
+          "if": {
+            "required": ["type"],
+            "properties": { "type": { "const": "property_set" } }
+          },
+          "then": {
+            "properties": {
+              "propertyExpectations": { "minItems": 1 }
+            },
+            "required": ["propertyExpectations"]
+          }
+        }
+      ]
+    }
+  }
+}
