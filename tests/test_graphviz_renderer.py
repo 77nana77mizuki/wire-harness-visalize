@@ -34,6 +34,8 @@ def test_dot_circuit_is_deterministic(fixtures_dir):
     assert '"D1" -> "S1"' in a
     assert '"S1" -> "X1"' in a  # via 経由で 2 ホップに分解
     assert "digraph G" in a
+    assert r'label="D1\n(device)"' in a  # DOT 改行エスケープ（\\n に潰れていない）
+    assert r"\\n" not in a
 
 
 def test_dot_option_config(fixtures_dir):

@@ -38,9 +38,10 @@ def _dot_circuit(pattern: Pattern) -> str:
     assert conn is not None
     lines = [_HEADER]
     for node in sorted(conn.nodes, key=lambda n: n.id):
-        label = node.id if node.kind == "splice" else f"{node.id}\\n({node.kind})"
         shape = _NODE_SHAPE.get(node.kind, "box")
-        lines.append(f'  "{_esc(node.id)}" [label="{_esc(label)}", shape={shape}];\n')
+        # \n は DOT の改行エスケープ。_esc の後に足す（_esc に通すと \\n に潰れる）。
+        label = _esc(node.id) if node.kind == "splice" else f"{_esc(node.id)}\\n({_esc(node.kind)})"
+        lines.append(f'  "{_esc(node.id)}" [label="{label}", shape={shape}];\n')
     for edge in sorted(conn.edges, key=lambda e: (e.source, e.target, e.via or "")):
         tags = [t for t in (edge.gauge, edge.color, "shield" if edge.shield else None) if t]
         elabel = " ".join(tags)

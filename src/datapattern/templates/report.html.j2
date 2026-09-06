@@ -43,6 +43,8 @@ code { background: var(--panel); padding: .1rem .35rem; border-radius: 3px; font
 .dp-empty { color: var(--muted); }
 figure.dp-figure { margin: 1rem 0; border: 1px solid var(--border); border-radius: 6px; padding: .9rem 1rem .5rem; overflow-x: auto; }
 figure.dp-figure figcaption { color: var(--muted); font-size: .85rem; margin-top: .3rem; }
+/* 外部レンダラの SVG（graphviz 等）は既定色が黒。ダークテーマでも読めるよう白地に載せる。 */
+figure.dp-figure svg { background: #ffffff; border-radius: 4px; max-width: 100%; height: auto; }
 .dp-expr { margin: .2rem 0 .6rem; }
 .dp-subhead { font-weight: 600; margin: .8rem 0 .2rem; color: var(--muted); }
 .summary-table td:nth-child(2), .summary-table th:nth-child(2) { text-align: right; width: 6rem; }

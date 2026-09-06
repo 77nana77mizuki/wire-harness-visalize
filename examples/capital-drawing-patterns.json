@@ -1,0 +1,462 @@
+{
+  "schemaVersion": "1.0",
+  "addon": {
+    "name": "Capital Logic 図面パターン一覧（システム検証用データセット）",
+    "pluginType": "unknown",
+    "capitalVersion": "2207"
+  },
+  "generatedFrom": {
+    "generator": "hand-authored validation dataset"
+  },
+  "patterns": [
+    {
+      "id": "logical-signal-point-to-point",
+      "type": "circuit",
+      "title": "論理コネクティビティ（signal のみ、電線未割当）",
+      "summary": "2 デバイス間を signal で接続しただけの論理図。conductor はまだ無い。",
+      "rationale": "論理設計段階の最小形。アドオンが「signal はあるが wire が無い」状態を正しく扱えるか。",
+      "capitalObjects": [
+        { "kind": "device", "ref": "ECU1" },
+        { "kind": "device", "ref": "SW1" },
+        { "kind": "signal", "ref": "SIG_START", "properties": { "netName": "START_REQ" } }
+      ],
+      "connectivity": {
+        "nodes": [
+          { "id": "ECU1", "kind": "device", "pincount": 1, "pinlabels": ["IN"] },
+          { "id": "SW1", "kind": "device", "pincount": 1, "pinlabels": ["OUT"] }
+        ],
+        "edges": [
+          { "from": "SW1.OUT", "to": "ECU1.IN" }
+        ]
+      },
+      "testHints": [
+        "conductor 未割当のまま DRC / レポートを実行し、null 参照にならないこと",
+        "対象外: 物理長・CSA（この段階では存在しない）"
+      ],
+      "renderHints": { "preferredMethods": ["graphviz", "mermaid", "html"] }
+    },
+    {
+      "id": "wiring-point-to-point",
+      "type": "circuit",
+      "title": "配線図：ポイント・ツー・ポイント",
+      "summary": "device の pin 同士を 1 本の conductor で直結した最小の配線図。",
+      "rationale": "wiring 段階の基準ケース。分岐なし・単芯・シールドなし。",
+      "capitalObjects": [
+        { "kind": "connector", "ref": "X1", "properties": { "partNumber": "CON-2P", "cavities": 2 } },
+        { "kind": "connector", "ref": "X2", "properties": { "partNumber": "CON-2P", "cavities": 2 } },
+        { "kind": "wire", "ref": "W1", "properties": { "csa": 0.5, "color": "BN", "length": 850 } }
+      ],
+      "connectivity": {
+        "nodes": [
+          { "id": "X1", "kind": "connector", "pincount": 2, "pinlabels": ["A", "B"] },
+          { "id": "X2", "kind": "connector", "pincount": 2, "pinlabels": ["A", "B"] }
+        ],
+        "edges": [
+          { "from": "X1.A", "to": "X2.A", "gauge": "0.5", "color": "BN" }
+        ]
+      },
+      "testHints": ["最も素直なケース。他パターンの回帰比較の基準に使う"],
+      "renderHints": { "preferredMethods": ["wireviz", "graphviz", "html"] }
+    },
+    {
+      "id": "splice-branch-one-to-three",
+      "type": "circuit",
+      "title": "分岐：スプライスで 1 → 3",
+      "summary": "1 本の給電を splice で 3 分岐して 3 つの負荷へ配る。",
+      "rationale": "分岐（splice）を含む代表形。アドオンが splice をまたいだ経路探索・分岐数カウントを扱えるか。",
+      "capitalObjects": [
+        { "kind": "connector", "ref": "PWR", "properties": { "partNumber": "CON-1P" } },
+        { "kind": "splice", "ref": "SP1", "properties": { "seal": "SEAL-A" } },
+        { "kind": "connector", "ref": "L1" },
+        { "kind": "connector", "ref": "L2" },
+        { "kind": "connector", "ref": "L3" },
+        { "kind": "wire", "ref": "W_FEED", "properties": { "csa": 1.0, "color": "RD" } }
+      ],
+      "connectivity": {
+        "nodes": [
+          { "id": "PWR", "kind": "connector", "pincount": 1 },
+          { "id": "SP1", "kind": "splice" },
+          { "id": "L1", "kind": "connector", "pincount": 1 },
+          { "id": "L2", "kind": "connector", "pincount": 1 },
+          { "id": "L3", "kind": "connector", "pincount": 1 }
+        ],
+        "edges": [
+          { "from": "PWR.1", "to": "SP1", "gauge": "1.0", "color": "RD" },
+          { "from": "SP1", "to": "L1.1", "gauge": "0.5", "color": "RD" },
+          { "from": "SP1", "to": "L2.1", "gauge": "0.5", "color": "RD" },
+          { "from": "SP1", "to": "L3.1", "gauge": "0.5", "color": "RD" }
+        ]
+      },
+      "testHints": [
+        "境界: 分岐数 1（実質分岐なし）/ 2 / 多数",
+        "異常系: splice に接続が 1 本しかない（宙ぶらりん）"
+      ],
+      "renderHints": { "preferredMethods": ["wireviz", "graphviz"] }
+    },
+    {
+      "id": "multicore-three-core",
+      "type": "circuit",
+      "title": "マルチコアケーブル（3 芯）",
+      "summary": "2 つのコネクタ間を 3 芯の multicore ケーブルで接続。各芯に色・信号割当。",
+      "rationale": "multicore を含むケース。芯（core）を個別 wire として展開できるか、束ねたまま扱うか。",
+      "capitalObjects": [
+        { "kind": "connector", "ref": "M1", "properties": { "cavities": 3 } },
+        { "kind": "connector", "ref": "M2", "properties": { "cavities": 3 } },
+        { "kind": "multicore", "ref": "MC1", "properties": { "cores": 3, "partNumber": "CBL-3C-050", "jacketColor": "GY" } }
+      ],
+      "connectivity": {
+        "nodes": [
+          { "id": "M1", "kind": "connector", "pincount": 3, "pinlabels": ["1", "2", "3"] },
+          { "id": "M2", "kind": "connector", "pincount": 3, "pinlabels": ["1", "2", "3"] }
+        ],
+        "edges": [
+          { "from": "M1.1", "to": "M2.1", "via": "MC1", "gauge": "0.5", "color": "BK" },
+          { "from": "M1.2", "to": "M2.2", "via": "MC1", "gauge": "0.5", "color": "BN" },
+          { "from": "M1.3", "to": "M2.3", "via": "MC1", "gauge": "0.5", "color": "BU" }
+        ]
+      },
+      "testHints": [
+        "芯数の境界: 2 芯 / 多芯",
+        "全芯が同一始終点 vs 芯ごとに終点が異なる（部分結線）"
+      ],
+      "renderHints": { "preferredMethods": ["wireviz", "graphviz"] }
+    },
+    {
+      "id": "shielded-pair-with-drain",
+      "type": "circuit",
+      "title": "シールド線＋ドレン（drain）をアース終端",
+      "summary": "シールド付きペアケーブル。シールドは drain wire でグラウンドへ落とす。",
+      "rationale": "shield / drain の扱い。シールド終端先（片端 / 両端接地）で結線が変わる。",
+      "capitalObjects": [
+        { "kind": "connector", "ref": "SENS" },
+        { "kind": "connector", "ref": "ECU2" },
+        { "kind": "shield", "ref": "SH1", "properties": { "termination": "single-end", "drainCsa": 0.35 } },
+        { "kind": "wire", "ref": "W_DRAIN", "properties": { "csa": 0.35, "color": "BK" } }
+      ],
+      "connectivity": {
+        "nodes": [
+          { "id": "SENS", "kind": "connector", "pincount": 3, "pinlabels": ["SIG+", "SIG-", "SHLD"] },
+          { "id": "ECU2", "kind": "connector", "pincount": 3, "pinlabels": ["AIN+", "AIN-", "GND"] },
+          { "id": "GND1", "kind": "terminal" }
+        ],
+        "edges": [
+          { "from": "SENS.SIG+", "to": "ECU2.AIN+", "gauge": "0.35", "color": "WH", "shield": true },
+          { "from": "SENS.SIG-", "to": "ECU2.AIN-", "gauge": "0.35", "color": "BN", "shield": true },
+          { "from": "SENS.SHLD", "to": "GND1", "gauge": "0.35", "color": "BK" }
+        ]
+      },
+      "testHints": [
+        "片端接地 / 両端接地 の 2 パターン",
+        "shield=true の wire と drain wire を別物として集計できるか"
+      ],
+      "renderHints": { "preferredMethods": ["graphviz", "wireviz"] }
+    },
+    {
+      "id": "twisted-pair-can-bus-stub",
+      "type": "circuit",
+      "title": "ツイストペア CAN バス＋スタブ",
+      "summary": "CAN_H / CAN_L のツイストペア幹線に、スプライスでノードをスタブ接続。",
+      "rationale": "バス構造 + スタブ。幹線とスタブの区別、終端抵抗ノードの有無。",
+      "capitalObjects": [
+        { "kind": "wire", "ref": "CANH", "properties": { "csa": 0.35, "color": "YE", "twist": "40/m" } },
+        { "kind": "wire", "ref": "CANL", "properties": { "csa": 0.35, "color": "GN", "twist": "40/m" } },
+        { "kind": "splice", "ref": "SPH" },
+        { "kind": "splice", "ref": "SPL" }
+      ],
+      "connectivity": {
+        "nodes": [
+          { "id": "NODE_A", "kind": "connector", "pincount": 2, "pinlabels": ["CANH", "CANL"] },
+          { "id": "NODE_B", "kind": "connector", "pincount": 2, "pinlabels": ["CANH", "CANL"] },
+          { "id": "NODE_C", "kind": "connector", "pincount": 2, "pinlabels": ["CANH", "CANL"] },
+          { "id": "SPH", "kind": "splice" },
+          { "id": "SPL", "kind": "splice" }
+        ],
+        "edges": [
+          { "from": "NODE_A.CANH", "to": "SPH", "gauge": "0.35", "color": "YE" },
+          { "from": "SPH", "to": "NODE_B.CANH", "gauge": "0.35", "color": "YE" },
+          { "from": "SPH", "to": "NODE_C.CANH", "gauge": "0.35", "color": "YE" },
+          { "from": "NODE_A.CANL", "to": "SPL", "gauge": "0.35", "color": "GN" },
+          { "from": "SPL", "to": "NODE_B.CANL", "gauge": "0.35", "color": "GN" },
+          { "from": "SPL", "to": "NODE_C.CANL", "gauge": "0.35", "color": "GN" }
+        ]
+      },
+      "testHints": [
+        "スタブ長の境界（長すぎる = DRC 違反想定）",
+        "終端ノード（120Ω）が 2 個ちょうど / 0 個 / 3 個"
+      ],
+      "renderHints": { "preferredMethods": ["graphviz", "mermaid"] }
+    },
+    {
+      "id": "daisy-chain-lamps",
+      "type": "circuit",
+      "title": "デイジーチェーン（数珠つなぎ）",
+      "summary": "電源を L1 → L2 → L3 と順に渡す数珠つなぎ配線。",
+      "rationale": "daisy chain 特有の「通過配線（pass-through）」。各ノードで in/out ピンを持つ。",
+      "capitalObjects": [
+        { "kind": "connector", "ref": "L1", "properties": { "cavities": 2 } },
+        { "kind": "connector", "ref": "L2", "properties": { "cavities": 2 } },
+        { "kind": "connector", "ref": "L3", "properties": { "cavities": 2 } }
+      ],
+      "connectivity": {
+        "nodes": [
+          { "id": "SRC", "kind": "connector", "pincount": 1 },
+          { "id": "L1", "kind": "connector", "pincount": 2, "pinlabels": ["IN", "OUT"] },
+          { "id": "L2", "kind": "connector", "pincount": 2, "pinlabels": ["IN", "OUT"] },
+          { "id": "L3", "kind": "connector", "pincount": 2, "pinlabels": ["IN", "OUT"] }
+        ],
+        "edges": [
+          { "from": "SRC.1", "to": "L1.IN", "gauge": "0.75", "color": "RD" },
+          { "from": "L1.OUT", "to": "L2.IN", "gauge": "0.75", "color": "RD" },
+          { "from": "L2.OUT", "to": "L3.IN", "gauge": "0.75", "color": "RD" }
+        ]
+      },
+      "testHints": [
+        "チェーン長の境界: 1 個 / 2 個 / 多数",
+        "末端 L3.OUT が未接続（想定通り）か、誤って接続されているか"
+      ],
+      "renderHints": { "preferredMethods": ["graphviz", "mermaid"] }
+    },
+    {
+      "id": "ground-earth-star-point",
+      "type": "circuit",
+      "title": "アース接地：スター（1 点接地）",
+      "summary": "複数デバイスのグラウンドを 1 つの ground splice に集め、ground stud（ボディアース）へ落とす。",
+      "rationale": "アース接地の代表形。接地ポイント数、スター vs マルチポイントで DRC 結果が変わる。",
+      "capitalObjects": [
+        { "kind": "connector", "ref": "D1" },
+        { "kind": "connector", "ref": "D2" },
+        { "kind": "connector", "ref": "D3" },
+        { "kind": "splice", "ref": "GSP", "properties": { "type": "ground-splice" } },
+        { "kind": "library_part", "ref": "STUD1", "properties": { "partNumber": "GND-STUD-M6", "torque": "9Nm" } }
+      ],
+      "connectivity": {
+        "nodes": [
+          { "id": "D1", "kind": "connector", "pincount": 1, "pinlabels": ["GND"] },
+          { "id": "D2", "kind": "connector", "pincount": 1, "pinlabels": ["GND"] },
+          { "id": "D3", "kind": "connector", "pincount": 1, "pinlabels": ["GND"] },
+          { "id": "GSP", "kind": "splice" },
+          { "id": "G100", "kind": "terminal" }
+        ],
+        "edges": [
+          { "from": "D1.GND", "to": "GSP", "gauge": "0.5", "color": "BK" },
+          { "from": "D2.GND", "to": "GSP", "gauge": "0.5", "color": "BK" },
+          { "from": "D3.GND", "to": "GSP", "gauge": "0.5", "color": "BK" },
+          { "from": "GSP", "to": "G100", "gauge": "2.5", "color": "BK" }
+        ]
+      },
+      "testHints": [
+        "スター（1 点）/ マルチポイント（各デバイス個別に stud）の 2 パターン",
+        "境界: ground stud への戻り線 CSA が合計負荷電流に対して不足",
+        "対象外: シャシー抵抗のシミュレーション"
+      ],
+      "renderHints": { "preferredMethods": ["wireviz", "graphviz"] }
+    },
+    {
+      "id": "highway-connection-subsystems",
+      "type": "circuit",
+      "title": "ハイウェイ接続（サブシステム間バンドル）",
+      "summary": "2 つのサブシステムを highway（多信号バンドル）で接続。個別 signal は highway 内に隠蔽。",
+      "rationale": "highway 抽象。中の signal を展開して数えるか、highway 1 本として扱うか。",
+      "capitalObjects": [
+        { "kind": "device", "ref": "FRONT_MODULE" },
+        { "kind": "device", "ref": "REAR_MODULE" },
+        { "kind": "highway", "ref": "HW1", "properties": { "signalCount": 12 } }
+      ],
+      "connectivity": {
+        "nodes": [
+          { "id": "FRONT_MODULE", "kind": "device", "pincount": 1, "pinlabels": ["HW"] },
+          { "id": "REAR_MODULE", "kind": "device", "pincount": 1, "pinlabels": ["HW"] }
+        ],
+        "edges": [
+          { "from": "FRONT_MODULE.HW", "to": "REAR_MODULE.HW", "via": "HW1" }
+        ]
+      },
+      "testHints": [
+        "highway 内 signal 数の境界: 1 / 多数",
+        "highway の一部だけが option 制御されるケース"
+      ],
+      "renderHints": { "preferredMethods": ["mermaid", "graphviz"] }
+    },
+    {
+      "id": "inline-connector-segment-split",
+      "type": "circuit",
+      "title": "インライン（中継）コネクタでハーネス分割",
+      "summary": "1 本の回路を inline connector（X10a/X10b）で 2 セグメントに分ける。",
+      "rationale": "inline は「同一ネットが別ハーネスをまたぐ」。ネット連続性の判定。",
+      "capitalObjects": [
+        { "kind": "connector", "ref": "A1" },
+        { "kind": "connector", "ref": "X10a", "properties": { "role": "inline-male" } },
+        { "kind": "connector", "ref": "X10b", "properties": { "role": "inline-female" } },
+        { "kind": "connector", "ref": "B1" }
+      ],
+      "connectivity": {
+        "nodes": [
+          { "id": "A1", "kind": "connector", "pincount": 1 },
+          { "id": "X10a", "kind": "connector", "pincount": 1 },
+          { "id": "X10b", "kind": "connector", "pincount": 1 },
+          { "id": "B1", "kind": "connector", "pincount": 1 }
+        ],
+        "edges": [
+          { "from": "A1.1", "to": "X10a.1", "gauge": "0.5", "color": "GN" },
+          { "from": "X10a.1", "to": "X10b.1" },
+          { "from": "X10b.1", "to": "B1.1", "gauge": "0.5", "color": "GN" }
+        ]
+      },
+      "testHints": [
+        "inline 前後で CSA / 色が不一致（DRC 違反想定）",
+        "inline が 0 個（単一ハーネス）/ 複数直列"
+      ],
+      "renderHints": { "preferredMethods": ["wireviz", "graphviz"] }
+    },
+    {
+      "id": "power-distribution-fused-feed",
+      "type": "circuit",
+      "title": "電源分配：ヒューズ経由の給電＋分岐",
+      "summary": "バッテリ → ヒューズ → splice → 複数負荷。保護デバイスを含む配電回路。",
+      "rationale": "回路保護（fuse）を含む。ヒューズ定格と下流 CSA の整合が DRC 対象になりうる。",
+      "capitalObjects": [
+        { "kind": "library_part", "ref": "BATT" },
+        { "kind": "component", "ref": "F12", "properties": { "type": "fuse", "rating": "15A" } },
+        { "kind": "splice", "ref": "SPF" },
+        { "kind": "wire", "ref": "W_BATT", "properties": { "csa": 2.5, "color": "RD" } }
+      ],
+      "connectivity": {
+        "nodes": [
+          { "id": "BATT", "kind": "terminal" },
+          { "id": "F12", "kind": "component", "pincount": 2, "pinlabels": ["IN", "OUT"] },
+          { "id": "SPF", "kind": "splice" },
+          { "id": "LOAD1", "kind": "connector", "pincount": 1 },
+          { "id": "LOAD2", "kind": "connector", "pincount": 1 }
+        ],
+        "edges": [
+          { "from": "BATT", "to": "F12.IN", "gauge": "2.5", "color": "RD" },
+          { "from": "F12.OUT", "to": "SPF", "gauge": "1.5", "color": "RD" },
+          { "from": "SPF", "to": "LOAD1.1", "gauge": "0.75", "color": "RD" },
+          { "from": "SPF", "to": "LOAD2.1", "gauge": "0.75", "color": "RD" }
+        ]
+      },
+      "testHints": [
+        "境界: 下流 CSA が fuse 定格に対して過小 / ちょうど / 十分",
+        "fuse を含まない直結（保護なし）ケースとの比較"
+      ],
+      "renderHints": { "preferredMethods": ["graphviz", "wireviz"] }
+    },
+    {
+      "id": "overbraid-bundle-protection",
+      "type": "circuit",
+      "title": "オーバーブレード（overbraid）で束を保護",
+      "summary": "複数 wire の束に overbraid をかけ、両端をクランプ／アース。",
+      "rationale": "overbraid は wire ではなく被覆保護。長さ・両端処理が属性として付く。",
+      "capitalObjects": [
+        { "kind": "overbraid", "ref": "OB1", "properties": { "length": 600, "material": "tinned-copper", "endTreatment": "both-clamped" } },
+        { "kind": "wire", "ref": "WA", "properties": { "csa": 0.5 } },
+        { "kind": "wire", "ref": "WB", "properties": { "csa": 0.5 } }
+      ],
+      "connectivity": {
+        "nodes": [
+          { "id": "P1", "kind": "connector", "pincount": 2 },
+          { "id": "P2", "kind": "connector", "pincount": 2 },
+          { "id": "OBGND", "kind": "terminal" }
+        ],
+        "edges": [
+          { "from": "P1.1", "to": "P2.1", "via": "OB1", "gauge": "0.5", "color": "BN" },
+          { "from": "P1.2", "to": "P2.2", "via": "OB1", "gauge": "0.5", "color": "BU" },
+          { "from": "OB1", "to": "OBGND", "gauge": "1.0", "color": "BK" }
+        ]
+      },
+      "testHints": [
+        "overbraid 内 wire 数の境界",
+        "端末処理: 両端クランプ / 片端のみ / 未処理（DRC 違反想定）"
+      ],
+      "renderHints": { "preferredMethods": ["graphviz", "wireviz"] }
+    },
+    {
+      "id": "opt-variant-steering-side",
+      "type": "option_config",
+      "title": "オプション構成：ハンドル位置（RHD/LHD）＋牽引パッケージ",
+      "summary": "RHD と LHD は相互排他。TOW_PKG は独立。各構成でどの配線が残るか。",
+      "rationale": "150% 設計の中核。相互排他違反を含め、option expression の解決結果を網羅する。",
+      "optionExpression": "(RHD OR LHD) AND NOT (RHD AND LHD)",
+      "variantMatrix": [
+        { "expr": "LHD=0,RHD=0,TOW_PKG=0", "resolvesTo": [] },
+        { "expr": "LHD=1,RHD=0,TOW_PKG=0", "resolvesTo": ["W_STEER_L", "X_COL_L"] },
+        { "expr": "LHD=0,RHD=1,TOW_PKG=0", "resolvesTo": ["W_STEER_R", "X_COL_R"] },
+        { "expr": "LHD=0,RHD=0,TOW_PKG=1", "resolvesTo": ["W_TOW", "X_TOW"] },
+        { "expr": "LHD=0,RHD=1,TOW_PKG=1", "resolvesTo": ["W_STEER_R", "X_COL_R", "W_TOW", "X_TOW"] },
+        { "expr": "LHD=1,RHD=0,TOW_PKG=1", "resolvesTo": ["W_STEER_L", "X_COL_L", "W_TOW", "X_TOW"] },
+        { "expr": "LHD=1,RHD=1,TOW_PKG=0", "resolvesTo": ["W_STEER_L", "X_COL_L", "W_STEER_R", "X_COL_R"] }
+      ],
+      "capitalObjects": [
+        { "kind": "wire", "ref": "W_STEER_L", "properties": { "optionCode": "LHD" } },
+        { "kind": "wire", "ref": "W_STEER_R", "properties": { "optionCode": "RHD" } },
+        { "kind": "wire", "ref": "W_TOW", "properties": { "optionCode": "TOW_PKG" } }
+      ],
+      "testHints": [
+        "全 false（デフォルト構成）で対象 0 件",
+        "LHD=1,RHD=1 は本来あり得ない構成。アドオンがエラーにするか黙って両方出すか",
+        "対象外: 存在しない option code（別パターンで扱う）"
+      ],
+      "renderHints": { "preferredMethods": ["html", "graphviz"] }
+    },
+    {
+      "id": "opt-expr-nested-and-or-not",
+      "type": "option_config",
+      "title": "オプション式：ネストした AND / OR / NOT",
+      "summary": "深いネスト式が正しく評価されるか。未定義コードを 1 つ混ぜる。",
+      "rationale": "式パーサ / 評価のストレス。ネスト深さと未知コードの扱い。",
+      "optionExpression": "AUDIO_HI AND (NAV OR (TOW_PKG AND NOT BASE)) AND NOT UNDEFINED_CODE",
+      "variantMatrix": [
+        { "expr": "AUDIO_HI=1,NAV=1", "resolvesTo": ["W_AMP", "W_NAV"] },
+        { "expr": "AUDIO_HI=1,NAV=0,TOW_PKG=1,BASE=0", "resolvesTo": ["W_AMP"] },
+        { "expr": "AUDIO_HI=1,NAV=0,TOW_PKG=1,BASE=1", "resolvesTo": [] },
+        { "expr": "AUDIO_HI=0", "resolvesTo": [] }
+      ],
+      "testHints": [
+        "UNDEFINED_CODE を含む式の評価: エラー / false 扱い / 警告",
+        "ネスト深さ 3 以上"
+      ],
+      "renderHints": { "preferredMethods": ["html"] }
+    },
+    {
+      "id": "prop-wire-csa-boundary",
+      "type": "property_set",
+      "title": "プロパティ：電線 CSA の境界値",
+      "summary": "wire の断面積を規格の下限・上限まわりで設定。",
+      "rationale": "CSA チェックの境界。合格側・違反側の両方を用意する。",
+      "capitalObjects": [
+        { "kind": "wire", "ref": "W1", "properties": { "csa": 0.35 } }
+      ],
+      "propertyExpectations": [
+        { "object": "W1", "property": "csa", "value": 0.35, "why": "下限ちょうど（合格側の境界）" },
+        { "object": "W1", "property": "csa", "value": 0.34, "why": "下限未満（違反側の境界）" },
+        { "object": "W1", "property": "csa", "value": 6.0, "why": "上限ちょうど（合格側の境界）" },
+        { "object": "W1", "property": "csa", "value": null, "why": "CSA 未設定（必須欠落）" },
+        { "object": "W1", "property": "csa", "value": "0.5mm2", "why": "数値でなく文字列（型不一致）" }
+      ],
+      "testHints": ["0.35 合格 / 0.34 違反 / 未設定はエラー"],
+      "renderHints": { "preferredMethods": ["html"] }
+    },
+    {
+      "id": "prop-splice-seal-and-cavity-plug",
+      "type": "property_set",
+      "title": "プロパティ：スプライスのシール／未使用キャビティのプラグ",
+      "summary": "防水スプライスにはシール品番、未使用キャビティにはキャビティプラグが必須。",
+      "rationale": "「必須プロパティが環境条件で変わる」ケース。防水/非防水で必須項目が違う。",
+      "capitalObjects": [
+        { "kind": "splice", "ref": "SP1", "properties": { "environment": "wet" } },
+        { "kind": "connector", "ref": "X1", "properties": { "cavities": 4, "usedCavities": 2 } }
+      ],
+      "propertyExpectations": [
+        { "object": "SP1", "property": "seal", "value": "SEAL-B2", "why": "防水スプライスはシール品番が必須" },
+        { "object": "SP1", "property": "seal", "value": null, "why": "防水なのにシール未設定（違反）" },
+        { "object": "X1", "property": "cavityPlug", "value": "PLUG-025", "why": "未使用キャビティ 2 個にプラグが必要" },
+        { "object": "X1", "property": "usedCavities", "value": 5, "why": "使用数 > 総キャビティ数（不整合）" }
+      ],
+      "testHints": [
+        "environment=dry なら seal 不要（対象外）",
+        "未使用キャビティ 0 個ならプラグ不要"
+      ],
+      "renderHints": { "preferredMethods": ["html"] }
+    }
+  ]
+}
