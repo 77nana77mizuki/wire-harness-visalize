@@ -189,13 +189,15 @@ def build_parser() -> argparse.ArgumentParser:
     p_render = sub.add_parser("render", help="各パターンを図アセットに変換する")
     p_render.add_argument("path", type=Path, help="datapatterns.json")
     p_render.add_argument("--out", type=Path, default=Path("out"), help="出力先（既定: out/）")
-    p_render.add_argument("--method", default="auto", help="レンダラ名 or auto（既定: auto）")
+    p_render.add_argument("--method", default="auto", help="レンダラ名 / auto / all（既定: auto）")
     p_render.set_defaults(func=_cmd_render)
 
     p_report = sub.add_parser("report", help="report.html を生成する（render も実行）")
     p_report.add_argument("path", type=Path, help="datapatterns.json")
     p_report.add_argument("--out", type=Path, default=Path("out"), help="出力先（既定: out/）")
-    p_report.add_argument("--method", default="auto", help="レンダラ名 or auto（既定: auto）")
+    p_report.add_argument(
+        "--method", default="all", help="レンダラ名 / auto / all（既定: all = 方式ごとにタブ）"
+    )
     p_report.set_defaults(func=_cmd_report)
 
     p_ingest = sub.add_parser("ingest", help="ソースツリーを manifest.json に正規化する")
@@ -224,7 +226,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_run.add_argument("--addon", type=Path, help="アドオンのソースディレクトリ")
     p_run.add_argument("--patterns", type=Path, help="datapatterns.json")
     p_run.add_argument("--out", type=Path, default=Path("out"), help="出力先（既定: out/）")
-    p_run.add_argument("--method", default="auto", help="レンダラ名 or auto（既定: auto）")
+    p_run.add_argument("--method", default="all", help="レンダラ名 / auto / all（既定: all）")
     p_run.set_defaults(func=_cmd_run)
 
     return parser

@@ -26,10 +26,9 @@ def test_option_config_fragment(tmp_path, fixtures_dir):
     asset = HtmlRenderer().render(p, _ctx(tmp_path))
     frag = (tmp_path / "html" / asset.path).read_text("utf-8")
     assert asset.kind == "html"
-    assert "<code>OPT_GND</code>" in frag
+    assert '<table class="grid">' in frag
     assert "OPT_GND=1" in frag
     assert "X1, W1" in frag
-    assert 'id="fig-opt-cfg-all-false"' in frag
 
 
 def test_property_set_fragment(tmp_path, fixtures_dir):
@@ -54,15 +53,16 @@ def test_circuit_fragment(tmp_path, fixtures_dir):
 
 
 def test_escapes_html(tmp_path):
-    from datapattern.model import Pattern
+    from datapattern.model import Pattern, VariantRow
 
     p = Pattern(
         id="x",
         type="option_config",
-        title="<script>",
+        title="t",
         summary="s",
         rationale="r",
-        option_expression="a & <b>",
+        option_expression="a & b",
+        variant_matrix=(VariantRow(expr="<script>alert(1)</script>", resolves_to=("A & B",)),),
     )
     asset = HtmlRenderer().render(p, _ctx(tmp_path))
     frag = (tmp_path / "html" / asset.path).read_text("utf-8")
@@ -86,7 +86,9 @@ def test_index_json_shape(tmp_path, fixtures_dir):
     model = load_model(fixtures_dir / "valid_full.json")
     m = render_patterns(model, HtmlRenderer(), tmp_path)
     index = json.loads((m.out_root / "index.json").read_text("utf-8"))
-    entry = index["entries"]["opt-cfg-all-false"]
+    records = index["entries"]["opt-cfg-all-false"]
+    assert isinstance(records, list) and len(records) == 1
+    entry = records[0]
     assert entry["asset_path"] == "opt-cfg-all-false.html"
     assert entry["kind"] == "html"
     assert entry["method"] == "html"

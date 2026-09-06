@@ -26,24 +26,26 @@ def test_report_structure(tmp_path, fixtures_dir):
     html = _build(tmp_path, fixtures_dir)
     assert html.startswith("<!DOCTYPE html>")
     assert html.endswith("\n")
-    assert "<h1>GroundCircuitDrc — テスト用データパターン" in html
+    assert "<h1>GroundCircuitDrc</h1>" in html
     assert "プラグイン種別: <strong>check</strong>" in html
     assert "Capital 2207" in html
-    # サマリの件数
-    assert "<td>1</td>" in html
-    # 各パターンの section
+    # 一覧テーブルの見出しと各行
+    assert "<h2>パターン一覧</h2>" in html
     for pid in ("circuit-switched-ground", "opt-cfg-all-false", "prop-wire-csa-lower-bound"):
-        assert f'id="{pid}"' in html
-    # 断片が埋め込まれている
+        assert f'id="{pid}"' in html  # 詳細 section
+        assert f'href="#{pid}"' in html  # 一覧からのリンク
+    # 詳細テーブルの行見出し（表形式）
+    assert "<th>なぜ必要か</th>" in html
+    assert "<th>option 式</th>" in html
     assert "<code>OPT_GND</code>" in html
-    # rationale / testHints
-    assert "なぜ必要か:" in html
-    assert "OPT_GND=0 で DRC を実行" in html
-    # per-pattern sourceRefs
-    assert "GroundCircuitDrc.java#L44-L52" in html
+    assert "OPT_GND=0 で DRC を実行" in html  # testHints
+    assert "GroundCircuitDrc.java#L44-L52" in html  # per-pattern sourceRefs
+    # 図タブ
+    assert 'class="figtabs"' in html
+    assert '<button class="tab active"' in html
     # フッターに生成器、タイムスタンプは無い
     assert "capital-addon-analysis@0.1.0" in html
-    assert "202" not in html.split("<footer>")[1]  # 年号らしき数字が無い
+    assert "202" not in html.split("<footer>")[1]
 
 
 def test_report_is_deterministic(tmp_path, fixtures_dir):

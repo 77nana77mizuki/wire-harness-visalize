@@ -1,6 +1,8 @@
 """``DataPatternModel`` + レンダマニフェスト → 自己完結 ``report.html``（決定論的）。
 
-タイムスタンプなど実行ごとに変わる値は出力しない（スナップショットテスト可能に保つ）。
+- 一覧テーブル ＋ パターンごとの詳細テーブル
+- 図は「実現方式ごとのタブ」で並べる（1 方式なら 1 タブ）
+- タイムスタンプなど実行ごとに変わる値は出さない
 """
 
 from __future__ import annotations
@@ -10,7 +12,7 @@ from pathlib import Path
 
 from jinja2 import Environment
 
-from datapattern.model import DataPatternModel
+from datapattern.model import DataPatternModel, Pattern
 from datapattern.render.pipeline import RenderManifest
 
 _TYPE_LABELS = {
@@ -21,38 +23,52 @@ _TYPE_LABELS = {
 _TYPE_ORDER = ["option_config", "circuit", "property_set"]
 
 
+def _environment() -> Environment:
+    # autoescape=True。図の断片だけ ``| safe`` で通す（各レンダラが escape 済み）。
+    return Environment(autoescape=True, trim_blocks=True, lstrip_blocks=True)
+
+
 def _load_template_source() -> str:
     return resources.files("datapattern.templates").joinpath("report.html.j2").read_text("utf-8")
 
 
-def _environment() -> Environment:
-    # autoescape=True。図の断片だけ ``| safe`` で通す（html_renderer が escape 済み）。
-    return Environment(autoescape=True, trim_blocks=True, lstrip_blocks=True)
+def _figures_for(pattern: Pattern, manifest: RenderManifest) -> list[dict[str, str]]:
+    figs: list[dict[str, str]] = []
+    for asset in manifest.assets_for(pattern.id):
+        content = manifest.path_of(asset).read_text("utf-8").rstrip("\n")
+        if asset.kind == "svg":
+            content = f'<div class="svg-wrap">{content}</div>'
+        figs.append({"method": asset.method, "content": content})
+    return figs
 
 
 def render_report_html(model: DataPatternModel, manifest: RenderManifest) -> str:
     """``report.html`` の中身を文字列で返す。"""
-    figures: dict[str, str] = {}
+    figures: dict[str, list[dict[str, str]]] = {}
     missing: list[str] = []
     for pattern in model.patterns:
-        asset = manifest.asset_for(pattern.id)
-        if asset is None:
+        figs = _figures_for(pattern, manifest)
+        if not figs:
             missing.append(pattern.id)
-            figures[pattern.id] = (
-                '<figure class="dp-figure"><p class="dp-empty">'
-                "利用可能なレンダラで描画できませんでした。</p></figure>"
-            )
-            continue
-        content = manifest.path_of(asset).read_text("utf-8").rstrip("\n")
-        if asset.kind == "svg":
-            content = f'<figure class="dp-figure">{content}</figure>'
-        figures[pattern.id] = content
+        figures[pattern.id] = figs
 
-    counts = {t: 0 for t in _TYPE_ORDER}
+    counts = dict.fromkeys(_TYPE_ORDER, 0)
     for p in model.patterns:
         counts[p.type] = counts.get(p.type, 0) + 1
     type_summary = [
         {"type": t, "count": counts.get(t, 0), "label": _TYPE_LABELS.get(t, t)} for t in _TYPE_ORDER
+    ]
+
+    patterns = sorted(model.patterns, key=lambda p: p.id)
+    overview = [
+        {
+            "id": p.id,
+            "type": p.type,
+            "title": p.title,
+            "summary": p.summary,
+            "methods": ", ".join(f["method"] for f in figures[p.id]) or "—",
+        }
+        for p in patterns
     ]
 
     template = _environment().from_string(_load_template_source())
@@ -60,9 +76,11 @@ def render_report_html(model: DataPatternModel, manifest: RenderManifest) -> str
         addon=model.addon,
         schema_version=model.schema_version,
         generator=(model.generated_from.generator if model.generated_from else None),
-        patterns=sorted(model.patterns, key=lambda p: p.id),
+        patterns=patterns,
+        overview=overview,
         figures=figures,
         type_summary=type_summary,
+        methods_used=manifest.methods(),
         skipped=sorted(set(manifest.skipped) | set(missing)),
     )
     return html if html.endswith("\n") else html + "\n"

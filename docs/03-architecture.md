@@ -95,14 +95,24 @@ deterministic = true
 ```
 
 > `requires` の外部コマンドが `PATH` に無いエントリは `shutil.which` で検出して**自動スキップ**。
-> `Registry.select(type, preferred)` は `preferred` → 任意の対応レンダラ → `html` の順にフォールバック。
-> `datapattern render/report/run --method auto`（既定）がこれを使い、
-> パターンごとに `renderHints.preferredMethods` を尊重して選ぶ。
+> パターンごとに `renderHints.preferredMethods` を先頭に見る。
+
+`--method` の 3 モード:
+
+| 値 | 動作 | 既定 |
+|----|------|------|
+| `all` | パターンごとに**対応レンダラ全部**で描く → レポートで方式ごとのタブ | `report` / `run` |
+| `auto` | パターンごとに 1 つ選ぶ（`select`: preferred → 任意 → `html`） | `render` |
+| `<name>` | その 1 本のみ（使えなければエラー） | — |
+
+`RenderManifest` は 1 パターンに複数 `Asset` を持てる。`renders/index.json` の
+`entries[pattern-id]` はレコードの**配列**。
 
 ### B-3. CLI
 
 ```bash
-python -m datapattern.render --method graphviz --in datapatterns.json --out renders/
+datapattern report datapatterns.json --out out/            # 既定 --method all
+datapattern render datapatterns.json --out out/ --method graphviz
 ```
 
 ### B-4. 新方式を足す手順（例: schemdraw）
@@ -224,11 +234,14 @@ python -m datapattern.render --method graphviz --in datapatterns.json --out rend
 - 各パターンの図
 - 「**なぜこの範囲で十分か / 何が対象外か**」の明示（カバレッジの根拠）
 
-### F-3. 共通
+### F-3. 共通（現行の実装）
 
-- **単一ファイルで完結**（画像は inline SVG または data URI、外部依存なし）
-- ライト / ダーク両対応
-- 印刷可（A4 レイアウト崩れなし）
+- **表形式**: 分類サマリ表 → パターン一覧表（ID / 分類 / タイトル / 概要 / 描画方式、ID は詳細へアンカー）
+  → 各パターンの詳細表（ID / 概要 / なぜ必要か / option 式 / testHints / 根拠を行見出しで）
+- **実現方式タブ**: 図は方式ごとのタブ（`--method all`）。`html` の表、`graphviz`/`wireviz`/`mermaid` の SVG を
+  同じ場所で切り替えて比較できる。切替は最小の inline JS、印刷時は全パネル展開
+- **単一ファイルで完結**（SVG は inline、外部依存は tab 切替の JS のみ）
+- ライト / ダーク両対応（外部レンダラの SVG は白地に載せる）、印刷可
 
 ---
 

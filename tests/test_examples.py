@@ -31,3 +31,17 @@ def test_deterministic(tmp_path):
     a = build_report(EXAMPLE, "html", tmp_path / "a")[2].read_text("utf-8")
     b = build_report(EXAMPLE, "html", tmp_path / "b")[2].read_text("utf-8")
     assert a == b
+
+
+def test_all_methods_report_has_tabs(tmp_path):
+    """--method all: 図タブが出る。外部ツールがあれば circuit は複数方式になる。"""
+    import shutil
+
+    model, manifest, report = build_report(EXAMPLE, "all", tmp_path)
+    html = report.read_text("utf-8")
+    assert 'class="figtabs"' in html
+    assert html.count('<button class="tab') >= len(model.patterns)
+    if shutil.which("dot"):
+        circuit_ids = [p.id for p in model.patterns if p.type == "circuit"]
+        multi = [c for c in circuit_ids if len({a.method for a in manifest.assets_for(c)}) > 1]
+        assert multi

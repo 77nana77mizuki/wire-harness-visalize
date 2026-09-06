@@ -60,6 +60,19 @@ class Registry:
                 return renderer
         return None
 
+    def all_supporting(self, pattern_type: str, preferred: tuple[str, ...] = ()) -> list[Renderer]:
+        """このパターン種別を扱える利用可能レンダラを全部返す（preferred を先頭に）。"""
+        ordered: list[str] = []
+        for name in (*preferred, *self.names(), _FALLBACK):
+            if name not in ordered:
+                ordered.append(name)
+        out: list[Renderer] = []
+        for name in ordered:
+            renderer = self._load(name)
+            if renderer is not None and renderer.supports(pattern_type):
+                out.append(renderer)
+        return out
+
 
 def _entry_from_toml(raw: dict[str, object]) -> RendererEntry:
     requires = tuple(str(r) for r in raw.get("requires", ()))

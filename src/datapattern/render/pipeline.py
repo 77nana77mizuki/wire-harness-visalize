@@ -1,7 +1,8 @@
 """パターン群を描画し ``index.json`` を書く。
 
 - :func:`render_patterns` … 単一レンダラで全パターン
-- :func:`render_auto` … レジストリでパターンごとに最適なレンダラを選ぶ
+- :func:`render_auto` … レジストリでパターンごとに最適なレンダラを 1 つ選ぶ
+- :func:`render_all` … パターンごとに対応レンダラ**全部**で描く（レポートのタブ比較用）
 
 契約は ``docs/03-architecture.md`` §B。
 """
@@ -28,14 +29,24 @@ class RenderManifest:
     def asset_for(self, pattern_id: str) -> Asset | None:
         return next((a for a in self.assets if a.pattern_id == pattern_id), None)
 
+    def assets_for(self, pattern_id: str) -> tuple[Asset, ...]:
+        return tuple(a for a in self.assets if a.pattern_id == pattern_id)
+
+    def methods(self) -> list[str]:
+        seen: list[str] = []
+        for a in self.assets:
+            if a.method not in seen:
+                seen.append(a.method)
+        return seen
+
     def path_of(self, asset: Asset) -> Path:
         return self.out_root / asset.method / asset.path
 
     def to_index(self) -> dict[str, object]:
-        return {
-            "entries": {a.pattern_id: a.as_record() for a in self.assets},
-            "skipped": list(self.skipped),
-        }
+        entries: dict[str, list[dict[str, object]]] = {}
+        for a in self.assets:
+            entries.setdefault(a.pattern_id, []).append(a.as_record())
+        return {"entries": entries, "skipped": list(self.skipped)}
 
 
 def _write_index(manifest: RenderManifest) -> None:
@@ -76,6 +87,21 @@ def render_auto(model: DataPatternModel, registry, out_root: Path) -> RenderMani
             skipped.append(pattern.id)
             continue
         assets.append(_render_one(renderer, pattern, out_root))
+    manifest = RenderManifest(Path(out_root), tuple(assets), tuple(skipped))
+    _write_index(manifest)
+    return manifest
+
+
+def render_all(model: DataPatternModel, registry, out_root: Path) -> RenderManifest:
+    """パターンごとに、対応する利用可能レンダラ全部で描画する。"""
+    assets: list[Asset] = []
+    skipped: list[str] = []
+    for pattern in sorted(model.patterns, key=lambda p: p.id):
+        renderers = registry.all_supporting(pattern.type, pattern.preferred_methods)
+        if not renderers:
+            skipped.append(pattern.id)
+            continue
+        assets.extend(_render_one(r, pattern, out_root) for r in renderers)
     manifest = RenderManifest(Path(out_root), tuple(assets), tuple(skipped))
     _write_index(manifest)
     return manifest

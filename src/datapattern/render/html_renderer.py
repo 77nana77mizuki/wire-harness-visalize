@@ -1,7 +1,7 @@
 """``html`` レンダラ — Jinja2 も外部ツールも使わず、決定論的に HTML 断片を組む。
 
-分類 A/C（表・カード）が主対象。分類 B も接続表として簡易に描ける（既定のフォールバック）。
-出力は ``<figure class="dp-figure ...">`` 断片で、``report.py`` がそのまま埋め込む。
+分類 A/C（表）が主対象。分類 B も接続表として簡易に描ける（既定のフォールバック）。
+出力はスタイルなしの ``<table class="grid">`` 等の断片で、``report.py`` の CSS が装飾する。
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ def _cell(value: object) -> str:
 
 
 def _table(headers: list[str], rows: list[list[object]]) -> list[str]:
-    out = ['<table class="dp-table">', "  <thead><tr>"]
+    out = ['<table class="grid">', "  <thead><tr>"]
     out += [f"    <th>{escape(h)}</th>" for h in headers]
     out += ["  </tr></thead>", "  <tbody>"]
     if not rows:
@@ -36,19 +36,17 @@ def _table(headers: list[str], rows: list[list[object]]) -> list[str]:
     return out
 
 
+def _subhead(text: str) -> str:
+    style = "font-weight:600;color:var(--muted);margin:.6rem 0 .2rem"
+    return f'<p class="subhead" style="{style}">{escape(text)}</p>'
+
+
 def _option_config(pattern: Pattern) -> list[str]:
-    body: list[str] = []
-    if pattern.option_expression:
-        body.append(
-            f'<p class="dp-expr">option expression: '
-            f"<code>{escape(pattern.option_expression)}</code></p>"
-        )
     rows = [
         [row.expr, ", ".join(row.resolves_to) if row.resolves_to else None]
         for row in pattern.variant_matrix
     ]
-    body += _table(["option 値の組", "解決後に残るオブジェクト"], rows)
-    return body
+    return _table(["option 値の組", "解決後に残るオブジェクト"], rows)
 
 
 def _property_set(pattern: Pattern) -> list[str]:
@@ -62,7 +60,7 @@ def _property_set(pattern: Pattern) -> list[str]:
         if o.properties
     ]
     if obj_rows:
-        body.append('<p class="dp-subhead">オブジェクトのプロパティ</p>')
+        body.append(_subhead("オブジェクトのプロパティ"))
         body += _table(["参照", "種別", "プロパティ"], obj_rows)
     return body
 
@@ -76,9 +74,9 @@ def _circuit(pattern: Pattern) -> list[str]:
         for n in sorted(conn.nodes, key=lambda n: n.id)
     ]
     edge_rows = [[e.source, e.target, e.via, e.gauge, e.color, e.shield] for e in conn.edges]
-    body = ['<p class="dp-subhead">ノード</p>']
+    body = [_subhead("ノード")]
     body += _table(["id", "種別", "ピン数", "ピン名"], node_rows)
-    body.append('<p class="dp-subhead">接続</p>')
+    body.append(_subhead("接続"))
     body += _table(["from", "to", "経由", "断面積", "色", "シールド"], edge_rows)
     return body
 
@@ -97,14 +95,7 @@ class HtmlRenderer(Renderer):
 
     def render(self, pattern: Pattern, ctx: RenderContext) -> Asset:
         builder = _BUILDERS[pattern.type]
-        lines = [f'<figure class="dp-figure dp-{pattern.type}" id="fig-{escape(pattern.id)}">']
-        lines += builder(pattern)
-        lines.append(
-            f"<figcaption>{escape(pattern.title)} "
-            f'<span class="dp-type">[{pattern.type}]</span></figcaption>'
-        )
-        lines.append("</figure>")
-        fragment = "\n".join(lines) + "\n"
+        fragment = "\n".join(builder(pattern)) + "\n"
 
         rel = Path(f"{pattern.id}.html")
         (ctx.out_dir / rel).write_text(fragment, encoding="utf-8")
