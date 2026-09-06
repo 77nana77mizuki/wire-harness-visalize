@@ -71,38 +71,33 @@ class Renderer(ABC):
 
 ### B-2. 登録
 
-`renderers/registry.yaml` に宣言し、`render/registry.py` が読み込む:
+`src/datapattern/renderers/registry.toml`（yaml でなく **toml**＝`tomllib` で依存ゼロ）に宣言し、
+`render/registry.py` が読み込む。`supports` はレンダラクラスの `supported_types` を正とする:
 
-```yaml
-renderers:
-  - name: html
-    module: datapattern.render.html_renderer:HtmlRenderer
-    supports: [option_config, property_set, circuit]
-    requires: []                 # Python のみ
-    deterministic: true
-  - name: wireviz
-    module: datapattern.render.wireviz_renderer:WirevizRenderer
-    supports: [circuit, property_set]
-    requires: [wireviz-cli, graphviz]   # GPLv3。import せず CLI 起動
-    external_process: true
-    deterministic: true
-  - name: graphviz
-    module: datapattern.render.graphviz_renderer:GraphvizRenderer
-    supports: [circuit, option_config]
-    requires: [graphviz]
-    external_process: true
-    deterministic: true
-  - name: mermaid
-    module: datapattern.render.mermaid_renderer:MermaidRenderer
-    supports: [option_config, circuit]
-    requires: []
-    deterministic: true
+```toml
+[[renderer]]
+name = "html"
+module = "datapattern.render.html_renderer:HtmlRenderer"
+requires = []          # Python のみ
+deterministic = true
+
+[[renderer]]
+name = "graphviz"
+module = "datapattern.render.graphviz_renderer:GraphvizRenderer"
+requires = ["dot"]     # サブプロセス起動
+deterministic = true
+
+[[renderer]]
+name = "wireviz"
+module = "datapattern.render.wireviz_renderer:WirevizRenderer"
+requires = ["wireviz"] # GPLv3。import せず CLI 起動
+deterministic = true
 ```
 
-> `external_process: true` の方式は、依存ツールをサブプロセスで起動する
-> （GPLv3 コードを自社コードに `import` しないため／バージョン固定のため）。
-> `requires` が満たせない環境では、レジストリがそのレンダラを自動スキップし
-> `html` にフォールバックする。
+> `requires` の外部コマンドが `PATH` に無いエントリは `shutil.which` で検出して**自動スキップ**。
+> `Registry.select(type, preferred)` は `preferred` → 任意の対応レンダラ → `html` の順にフォールバック。
+> `datapattern render/report/run --method auto`（既定）がこれを使い、
+> パターンごとに `renderHints.preferredMethods` を尊重して選ぶ。
 
 ### B-3. CLI
 
@@ -283,8 +278,8 @@ docs/                                # 本ドキュメント群
 | 2 | 縦串（最小 e2e） | 手書き `datapatterns.json` → `datapattern-render-html` → `report.py` → `report.html`、ゴールデンテスト | ✅ 完了（`html_renderer` + `render/pipeline.py` + `report.py` + Jinja2 テンプレート、`datapattern render`/`report` 実働、42 tests green、ゴールデン `tests/fixtures/expected/report_full.html`） |
 | 3 | 解析 | `static_scan.py` + `ingest.py` + `combos.py` + `capital-addon-analysis` skill | ✅ 完了（`ingest.py`＝manifest、`static_scan.py`＝regex スキャン→`evidence.json`（`evidence.schema.json` 準拠）、`combos.py`＝境界＋ペアワイズ＋排他違反。`datapattern ingest`/`scan`/`combos` 実働。tree-sitter-java は将来の高精度化オプション） |
 | 4 | オーケストレータ | `capital-datapattern-report` skill ＋ `datapattern run` で全パイプライン結線 | ✅ 完了（`orchestrate.py`＝`prepare_workspace`（ingest+scan+テンプレ）/`build_report`（validate+render+report）、`datapattern run --addon/--patterns`、`capital-datapattern-report` skill） |
-| 5 | レンダラ拡充 | `wireviz`（CLI 起動）+ `graphviz` + `registry.yaml`。`wireviz` 未導入環境で `html` にフォールバックすること | 次 |
-| 6 | 早期フォロー | `mermaid` / `schemdraw` / `drawio` を **skill 追加のみ**で導入（疎結合の実証） | 未 |
+| 5 | レンダラ拡充 | `wireviz`（CLI 起動）+ `graphviz` + registry。未導入環境で `html` にフォールバック | ✅ 完了（`render/registry.py` + `renderers/registry.toml`、`graphviz_renderer`（DOT→`dot`）、`wireviz_renderer`（WireViz YAML→`wireviz`）、`--method auto` でパターン別選択。`dot`/`wireviz` 無しでも `html` に落ちて全テスト green） |
+| 6 | 早期フォロー | `mermaid` / `schemdraw` / `drawio` を **skill 追加のみ**で導入（疎結合の実証） | 次 |
 
 ---
 

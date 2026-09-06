@@ -13,7 +13,6 @@ from pathlib import Path
 
 from datapattern import __version__
 from datapattern.model import SchemaValidationError, load_model, load_schema
-from datapattern.render.base import Renderer
 
 
 class CliError(Exception):
@@ -22,23 +21,6 @@ class CliError(Exception):
     def __init__(self, message: str, code: int = 1) -> None:
         super().__init__(message)
         self.code = code
-
-
-# 第5弾でレジストリに置き換える。今は html のみ。
-_RENDERERS: dict[str, type[Renderer]] = {}
-
-
-def _renderer(name: str) -> Renderer:
-    if not _RENDERERS:
-        from datapattern.render.html_renderer import HtmlRenderer
-
-        _RENDERERS["html"] = HtmlRenderer
-    try:
-        return _RENDERERS[name]()
-    except KeyError:
-        raise CliError(
-            f"未知のレンダラ: {name!r}（利用可能: {', '.join(sorted(_RENDERERS))}）", code=2
-        ) from None
 
 
 def _load(path: Path):
@@ -70,24 +52,31 @@ def _cmd_schema(args: argparse.Namespace) -> int:
     return 0
 
 
-def _cmd_render(args: argparse.Namespace) -> int:
-    from datapattern.render.pipeline import render_patterns
+def _render_model(model, method: str, out: Path):
+    from datapattern.orchestrate import RendererNotFound, render_model
 
+    try:
+        return render_model(model, method, out)
+    except RendererNotFound as exc:
+        raise CliError(str(exc), code=2) from None
+
+
+def _cmd_render(args: argparse.Namespace) -> int:
     model = _load(args.path)
-    manifest = render_patterns(model, _renderer(args.method), args.out / "renders")
+    manifest = _render_model(model, args.method, args.out)
+    methods = sorted({a.method for a in manifest.assets})
     print(
-        f"render: {len(manifest.assets)} 件を {manifest.method_dir}/ に出力"
-        f"（skip {len(manifest.skipped)} 件）"
+        f"render: {len(manifest.assets)} 件（{', '.join(methods) or '-'}）を "
+        f"{manifest.out_root}/ に出力（skip {len(manifest.skipped)} 件）"
     )
     return 0
 
 
 def _cmd_report(args: argparse.Namespace) -> int:
-    from datapattern.render.pipeline import render_patterns
     from datapattern.report import write_report
 
     model = _load(args.path)
-    manifest = render_patterns(model, _renderer(args.method), args.out / "renders")
+    manifest = _render_model(model, args.method, args.out)
     out_html = write_report(model, manifest, args.out / "report.html")
     print(f"report: {out_html}（patterns={len(model.patterns)}, 図={len(manifest.assets)}）")
     return 0
@@ -142,7 +131,7 @@ def _cmd_combos(args: argparse.Namespace) -> int:
 
 
 def _cmd_run(args: argparse.Namespace) -> int:
-    from datapattern.orchestrate import build_report, prepare_workspace
+    from datapattern.orchestrate import RendererNotFound, build_report, prepare_workspace
 
     if not args.addon and not args.patterns:
         raise CliError("--addon か --patterns の少なくとも一方を指定してください", code=2)
@@ -165,7 +154,10 @@ def _cmd_run(args: argparse.Namespace) -> int:
             )
             return 0
 
-    model, manifest, report_path = build_report(args.patterns, _renderer(args.method), args.out)
+    try:
+        model, manifest, report_path = build_report(args.patterns, args.method, args.out)
+    except RendererNotFound as exc:
+        raise CliError(str(exc), code=2) from None
     print(
         f"report: {report_path}（patterns={len(model.patterns)}, "
         f"図={len(manifest.assets)}, skip={len(manifest.skipped)}）"
@@ -197,13 +189,13 @@ def build_parser() -> argparse.ArgumentParser:
     p_render = sub.add_parser("render", help="各パターンを図アセットに変換する")
     p_render.add_argument("path", type=Path, help="datapatterns.json")
     p_render.add_argument("--out", type=Path, default=Path("out"), help="出力先（既定: out/）")
-    p_render.add_argument("--method", default="html", help="レンダラ名（既定: html）")
+    p_render.add_argument("--method", default="auto", help="レンダラ名 or auto（既定: auto）")
     p_render.set_defaults(func=_cmd_render)
 
     p_report = sub.add_parser("report", help="report.html を生成する（render も実行）")
     p_report.add_argument("path", type=Path, help="datapatterns.json")
     p_report.add_argument("--out", type=Path, default=Path("out"), help="出力先（既定: out/）")
-    p_report.add_argument("--method", default="html", help="レンダラ名（既定: html）")
+    p_report.add_argument("--method", default="auto", help="レンダラ名 or auto（既定: auto）")
     p_report.set_defaults(func=_cmd_report)
 
     p_ingest = sub.add_parser("ingest", help="ソースツリーを manifest.json に正規化する")
@@ -232,7 +224,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_run.add_argument("--addon", type=Path, help="アドオンのソースディレクトリ")
     p_run.add_argument("--patterns", type=Path, help="datapatterns.json")
     p_run.add_argument("--out", type=Path, default=Path("out"), help="出力先（既定: out/）")
-    p_run.add_argument("--method", default="html", help="レンダラ名（既定: html）")
+    p_run.add_argument("--method", default="auto", help="レンダラ名 or auto（既定: auto）")
     p_run.set_defaults(func=_cmd_run)
 
     return parser

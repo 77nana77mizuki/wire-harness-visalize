@@ -3,8 +3,9 @@
 Capital Logic（Siemens Capital）の Java 製アドオン開発において、
 **設計時にテスト用のデータパターンを洗い出し、図つき HTML レポートを出力する**ための基盤。
 
-現在フェーズ: **縦串（最小 e2e）完了**（[docs/03 §H](docs/03-architecture.md#h-実装ロードマップ)）。
-`datapatterns.json` → HTML レンダラ → 単一 `report.html` が生成できる。次は解析（Java 静的スキャン）。
+現在フェーズ: ロードマップ #1〜#5 完了（[docs/03 §H](docs/03-architecture.md#h-実装ロードマップ)）。
+アドオンソース → 静的スキャン → （LLM で datapatterns.json）→ 図つき `report.html` まで通る。
+図は `--method auto` で html / graphviz / wireviz をパターン別に自動選択（外部ツール無しなら html にフォールバック）。
 
 ## セットアップ / 開発
 
@@ -13,12 +14,16 @@ uv sync                        # 依存 + venv（Python 3.12 は uv が管理）
 uv run pytest                  # テスト
 uv run ruff check . && uv run ruff format --check .
 uv run datapattern --help
-uv run datapattern validate <datapatterns.json>          # JSON Schema 検証
-uv run datapattern report <datapatterns.json> --out out/ # out/report.html を生成
-uv run datapattern schema                                # 同梱 JSON Schema を出力
+uv run datapattern scan <アドオンのソースdir> --out out/     # → out/workspace/evidence.json ほか
+uv run datapattern combos --codes OPT_A,OPT_B                # option 組合せ（境界＋ペアワイズ）
+uv run datapattern validate <datapatterns.json>             # JSON Schema 検証
+uv run datapattern run --patterns <datapatterns.json> --out out/   # → out/report.html
+uv run datapattern schema                                   # 同梱 JSON Schema を出力
 ```
 
-`validate` / `schema` / `render` / `report` が実働。`ingest` / `scan` / `run` は骨組み。
+エンドツーエンド（`datapattern run --addon <src>` → LLM で `datapatterns.json` →
+`datapattern run --patterns`）は `capital-datapattern-report` skill を参照。
+`dot` / `wireviz` を入れると図がリッチになる（無くても `html` で動く）。
 
 ## ドキュメント
 

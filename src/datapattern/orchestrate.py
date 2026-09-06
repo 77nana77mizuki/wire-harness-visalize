@@ -13,10 +13,14 @@ from pathlib import Path
 
 from datapattern.ingest import Manifest, build_manifest, write_manifest
 from datapattern.model import DataPatternModel, load_model
-from datapattern.render.base import Renderer
-from datapattern.render.pipeline import RenderManifest, render_patterns
+from datapattern.render.pipeline import RenderManifest, render_auto, render_patterns
+from datapattern.render.registry import load_registry
 from datapattern.report import write_report
 from datapattern.static_scan import scan, write_evidence
+
+
+class RendererNotFound(LookupError):
+    """指定した ``--method`` が見つからない / 使えない。"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -77,13 +81,26 @@ def prepare_workspace(src: Path, out: Path) -> PreparedWorkspace:
     )
 
 
+def render_model(model: DataPatternModel, method: str, out: Path) -> RenderManifest:
+    """``method`` を解決して描画する。``"auto"`` はレジストリがパターンごとに選ぶ。"""
+    registry = load_registry()
+    renders_dir = out / "renders"
+    if method == "auto":
+        return render_auto(model, registry, renders_dir)
+    renderer = registry.get(method)
+    if renderer is None:
+        avail = ", ".join(registry.names()) or "(なし)"
+        raise RendererNotFound(f"レンダラ {method!r} は使えません（利用可能: {avail}, auto）")
+    return render_patterns(model, renderer, renders_dir)
+
+
 def build_report(
     patterns_path: Path,
-    renderer: Renderer,
+    method: str,
     out: Path,
 ) -> tuple[DataPatternModel, RenderManifest, Path]:
     """``datapatterns.json`` を検証し、render → report まで通す。"""
     model = load_model(patterns_path)
-    manifest = render_patterns(model, renderer, out / "renders")
+    manifest = render_model(model, method, out)
     report_path = write_report(model, manifest, out / "report.html")
     return model, manifest, report_path

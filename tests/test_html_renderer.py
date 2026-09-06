@@ -76,10 +76,8 @@ def test_render_patterns_is_deterministic(tmp_path, fixtures_dir):
     a = render_patterns(model, HtmlRenderer(), tmp_path / "a")
     b = render_patterns(model, HtmlRenderer(), tmp_path / "b")
     for asset in a.assets:
-        fa = (a.method_dir / asset.path).read_bytes()
-        fb = (b.method_dir / asset.path).read_bytes()
-        assert fa == fb
-    assert (a.method_dir / "index.json").read_text() == (b.method_dir / "index.json").read_text()
+        assert a.path_of(asset).read_bytes() == b.path_of(asset).read_bytes()
+    assert (a.out_root / "index.json").read_text() == (b.out_root / "index.json").read_text()
 
 
 def test_index_json_shape(tmp_path, fixtures_dir):
@@ -87,8 +85,7 @@ def test_index_json_shape(tmp_path, fixtures_dir):
 
     model = load_model(fixtures_dir / "valid_full.json")
     m = render_patterns(model, HtmlRenderer(), tmp_path)
-    index = json.loads((m.method_dir / "index.json").read_text("utf-8"))
-    assert index["method"] == "html"
+    index = json.loads((m.out_root / "index.json").read_text("utf-8"))
     entry = index["entries"]["opt-cfg-all-false"]
     assert entry["asset_path"] == "opt-cfg-all-false.html"
     assert entry["kind"] == "html"

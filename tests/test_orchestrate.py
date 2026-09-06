@@ -5,7 +5,6 @@ import json
 from datapattern.cli import main
 from datapattern.model import load_named_schema, validate_against, validate_model_dict
 from datapattern.orchestrate import build_report, patterns_template, prepare_workspace
-from datapattern.render.html_renderer import HtmlRenderer
 
 
 def test_prepare_workspace(tmp_path, fixtures_dir):
@@ -35,9 +34,7 @@ def test_patterns_template_pure():
 
 
 def test_build_report(tmp_path, fixtures_dir):
-    model, manifest, report_path = build_report(
-        fixtures_dir / "valid_full.json", HtmlRenderer(), tmp_path
-    )
+    model, manifest, report_path = build_report(fixtures_dir / "valid_full.json", "html", tmp_path)
     assert report_path.read_text("utf-8").startswith("<!DOCTYPE html>")
     assert len(manifest.assets) == len(model.patterns)
 

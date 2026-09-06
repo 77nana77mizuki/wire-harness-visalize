@@ -69,7 +69,7 @@ def test_pattern_not_rendered_by_method(tmp_path, fixtures_dir):
     model = load_model(fixtures_dir / "valid_full.json")
     manifest = render_patterns(model, OnlyCircuit(), tmp_path)
     html = render_report_html(model, manifest)
-    assert "このパターンは onlycircuit では描画されていません" in html
+    assert "利用可能なレンダラで描画できませんでした" in html
     assert "opt-cfg-all-false" in html.split("<footer>")[1]
 
 

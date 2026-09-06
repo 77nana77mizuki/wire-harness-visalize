@@ -39,11 +39,14 @@ def render_report_html(model: DataPatternModel, manifest: RenderManifest) -> str
         if asset is None:
             missing.append(pattern.id)
             figures[pattern.id] = (
-                f'<figure class="dp-figure"><p class="dp-empty">'
-                f"このパターンは {manifest.method} では描画されていません。</p></figure>"
+                '<figure class="dp-figure"><p class="dp-empty">'
+                "利用可能なレンダラで描画できませんでした。</p></figure>"
             )
             continue
-        figures[pattern.id] = (manifest.method_dir / asset.path).read_text("utf-8").rstrip("\n")
+        content = manifest.path_of(asset).read_text("utf-8").rstrip("\n")
+        if asset.kind == "svg":
+            content = f'<figure class="dp-figure">{content}</figure>'
+        figures[pattern.id] = content
 
     counts = {t: 0 for t in _TYPE_ORDER}
     for p in model.patterns:
